@@ -1,0 +1,1913 @@
+import { Component, OnInit } from '@angular/core';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import {
+  NoteService,
+  Note,
+  CreateNoteRequest,
+} from '../services/notes.service';
+
+interface SubjectWithNote {
+  id_subject: string;
+  subject_name: string;
+  coefficient: number;
+  theoretical_note: number | null;
+  has_note: boolean;
+}
+
+interface PracticalNoteTraining {
+  id_apprentice: string;
+  id_training: string;
+  practical_note: number | null;
+  has_practical_note: boolean;
+}
+
+interface NoteGroup {
+  id_apprentice: string;
+  id_training: string;
+  apprentice_first_name: string;
+  apprentice_last_name: string;
+  training_metier: string;
+  email: string;
+  practicalNote: number | null;
+  theoreticalNotes: Note[];
+}
+
+@Component({
+  selector: 'app-notes',
+  templateUrl: './notes.component.html',
+  styleUrls: ['./notes.component.css'],
+  standalone: false,
+})
+export class NotesComponent implements OnInit {
+  // Data
+  notes: Note[] = [];
+  filteredNotes: Note[] = [];
+  groupedNotes: NoteGroup[] = [];
+  subjectsWithNotes: SubjectWithNote[] = [];
+  practicalNoteTraining: PracticalNoteTraining | null = null;
+  apprentices: any[] = [];
+  trainings: any[] = [];
+  subjects: any[] = [];
+
+  // States
+  isLoading = false;
+  showForm = false;
+  showMultipleNotesSelection = false;
+  showMultipleNotesForm = false;
+  isEditing = false;
+  currentNoteId?: string;
+  selectedApprentice?: any;
+  selectedTraining?: any;
+
+  // Filters
+  searchTerm = '';
+  filterApprentice = '';
+  filterTraining = '';
+  filterSubject = '';
+
+  // Dialogs
+  showDeleteConfirm = false;
+  showSuccessDialog = false;
+  showErrorDialog = false;
+  dialogMessage = '';
+  noteToDelete?: string;
+
+  // Forms
+  practicalNoteForm: FormGroup;
+  multipleNotesForm: FormGroup;
+
+  constructor(private fb: FormBuilder, private noteService: NoteService) {
+    this.practicalNoteForm = this.createPracticalNoteForm();
+    this.multipleNotesForm = this.createMultipleNotesForm();
+  }
+
+  ngOnInit() {
+    this.initializeForms();
+    this.loadData();
+  }
+
+  private initializeForms() {
+    this.practicalNoteForm = this.createPracticalNoteForm();
+    this.multipleNotesForm = this.createMultipleNotesForm();
+
+    this.practicalNoteForm.valueChanges.subscribe((value) => {
+      console.log('📝 Practical note form changed:', value);
+    });
+
+    this.multipleNotesForm.valueChanges.subscribe((value) => {
+      console.log('📝 Multiple notes form changed:', value);
+    });
+  }
+
+  createPracticalNoteForm(): FormGroup {
+    return this.fb.group({
+      id_apprentice: ['', Validators.required],
+      id_training: ['', Validators.required],
+      practical_note: [
+        null,
+        [Validators.required, Validators.min(0), Validators.max(20)],
+      ],
+    });
+  }
+
+  createMultipleNotesForm(): FormGroup {
+    return this.fb.group({
+      id_training: ['', Validators.required],
+      id_apprentice: ['', Validators.required],
+    });
+  }
+
+  async loadData() {
+    this.isLoading = true;
+    try {
+      console.log('🔄 Starting data loading...');
+
+      const notesResponse = await this.noteService.getNotes().toPromise();
+      if (notesResponse?.success) {
+        this.notes = notesResponse.data || [];
+        this.applyFilters();
+        console.log('✅ Notes loaded:', this.notes.length, 'notes');
+        this.debugNotesData();
+      } else {
+        console.error('Error loading notes:', notesResponse?.error);
+        this.showError('Erreur lors du chargement des notes');
+      }
+
+      console.log('🔄 Loading form data...');
+      const formDataResponse = await this.noteService.getFormData().toPromise();
+
+      if (formDataResponse?.success) {
+        this.apprentices = formDataResponse.data.apprentices || [];
+        this.subjects = formDataResponse.data.subjects || [];
+        this.trainings = this.extractTrainings(this.subjects);
+
+        console.log('✅ Form data loaded:');
+        console.log('   - Apprentices:', this.apprentices.length);
+        console.log('   - Subjects:', this.subjects.length);
+        console.log('   - Trainings:', this.trainings.length);
+      } else {
+        console.warn('❌ Form data loading failed, using fallback data');
+        this.loadFallbackData();
+      }
+    } catch (error) {
+      console.error('💥 Error loading data:', error);
+      this.loadFallbackData();
+    } finally {
+      this.isLoading = false;
+      console.log('🏁 Data loading completed');
+    }
+  }
+
+  private extractTrainings(subjects: any[]): any[] {
+    const trainingMap = new Map();
+
+    subjects.forEach((subject) => {
+      if (subject.id_training && subject.training_metier) {
+        if (!trainingMap.has(subject.id_training)) {
+          trainingMap.set(subject.id_training, {
+            id_training: subject.id_training,
+            metier: subject.training_metier,
+          });
+        }
+      }
+    });
+
+    if (trainingMap.size === 0) {
+      trainingMap.set('FORM-GEN-GEN-798', {
+        id_training: 'FORM-GEN-GEN-798',
+        metier: 'Tourisme',
+      });
+    }
+
+    return Array.from(trainingMap.values());
+  }
+
+  private loadFallbackData() {
+    console.log('🔄 Loading fallback data...');
+
+    this.apprentices = [
+      {
+        id_apprentice: 'APR-001',
+        first_name: 'Nomenjanahary Olivier',
+        last_name: 'RAZAFINIRINA',
+        email: 'nirinaolivier9@gmail.com',
+        id_training: 'FORM-GEN-GEN-798',
+      },
+      {
+        id_apprentice: 'APR-002',
+        first_name: 'Manantena',
+        last_name: 'ZAZA',
+        email: 'zaza@gmail.com',
+        id_training: 'FORM-GEN-GEN-798',
+      },
+    ];
+
+    this.subjects = [
+      {
+        id_subject: 'MAT-001',
+        subject_name: 'Mathématiques',
+        coefficient: 3,
+        id_training: 'FORM-GEN-GEN-798',
+        training_metier: 'Tourisme',
+      },
+      {
+        id_subject: 'MAT-002',
+        subject_name: 'Physique',
+        coefficient: 3,
+        id_training: 'FORM-GEN-GEN-798',
+        training_metier: 'Tourisme',
+      },
+      {
+        id_subject: 'MAT-003',
+        subject_name: 'SVT',
+        coefficient: 3,
+        id_training: 'FORM-GEN-GEN-798',
+        training_metier: 'Tourisme',
+      },
+      {
+        id_subject: 'MAT-004',
+        subject_name: 'Français',
+        coefficient: 2,
+        id_training: 'FORM-GEN-GEN-798',
+        training_metier: 'Tourisme',
+      },
+      {
+        id_subject: 'MAT-005',
+        subject_name: 'Anglais',
+        coefficient: 2,
+        id_training: 'FORM-GEN-GEN-798',
+        training_metier: 'Tourisme',
+      },
+      {
+        id_subject: 'MAT-006',
+        subject_name: 'ML',
+        coefficient: 3,
+        id_training: 'FORM-GEN-GEN-798',
+        training_metier: 'Tourisme',
+      },
+    ];
+
+    this.trainings = [
+      {
+        id_training: 'FORM-GEN-GEN-798',
+        metier: 'Tourisme',
+      },
+    ];
+
+    console.log('✅ Fallback data loaded');
+  }
+
+  // NOUVELLES MÉTHODES POUR LE GROUPEMENT DES NOTES
+  groupNotesByApprenticeAndTraining(): void {
+    const groups = new Map();
+
+    this.filteredNotes.forEach((note) => {
+      const key = `${note.id_apprentice}-${note.id_training}`;
+
+      if (!groups.has(key)) {
+        groups.set(key, {
+          id_apprentice: note.id_apprentice,
+          id_training: note.id_training,
+          apprentice_first_name: note.apprentice_first_name,
+          apprentice_last_name: note.apprentice_last_name,
+          training_metier: note.training_metier,
+          email: note.email,
+          practicalNote: null,
+          theoreticalNotes: [],
+        });
+      }
+
+      const group = groups.get(key);
+
+      if (this.getNoteType(note) === 'Stage' && note.practical_note !== null) {
+        group.practicalNote = note.practical_note;
+      } else if (note.theoretical_note !== null) {
+        group.theoreticalNotes.push(note);
+      }
+    });
+
+    this.groupedNotes = Array.from(groups.values());
+    console.log('📊 Grouped notes:', this.groupedNotes);
+  }
+
+  hasPracticalNote(group: NoteGroup): boolean {
+    return group.practicalNote !== null && group.practicalNote !== undefined;
+  }
+
+  getPracticalNoteColspan(group: NoteGroup): number {
+    return 4;
+  }
+
+  calculateAverageWithPractical(
+    note: Note,
+    practicalNote: number | null
+  ): number | null {
+    if (note.theoretical_note !== null && practicalNote !== null) {
+      return (note.theoretical_note + practicalNote) / 2;
+    } else if (note.theoretical_note !== null) {
+      return note.theoretical_note;
+    } else if (practicalNote !== null) {
+      return practicalNote;
+    }
+    return null;
+  }
+
+  calculateOverallAverage(group: NoteGroup): number {
+    if (group.theoreticalNotes.length === 0 && group.practicalNote === null) {
+      return 0;
+    }
+
+    let totalTheoretical = 0;
+    let totalCoefficient = 0;
+
+    group.theoreticalNotes.forEach((note: Note) => {
+      if (note.theoretical_note !== null) {
+        totalTheoretical += note.theoretical_note * (note.coefficient || 1);
+        totalCoefficient += note.coefficient || 1;
+      }
+    });
+
+    const theoreticalAverage =
+      totalCoefficient > 0 ? totalTheoretical / totalCoefficient : 0;
+
+    if (group.practicalNote !== null && group.theoreticalNotes.length > 0) {
+      return (theoreticalAverage + group.practicalNote) / 2;
+    } else if (group.theoreticalNotes.length > 0) {
+      return theoreticalAverage;
+    } else {
+      return group.practicalNote || 0;
+    }
+  }
+
+  editPracticalNote(group: NoteGroup): void {
+    const practicalNote = this.filteredNotes.find(
+      (note) =>
+        note.id_apprentice === group.id_apprentice &&
+        note.id_training === group.id_training &&
+        this.getNoteType(note) === 'Stage'
+    );
+
+    if (practicalNote) {
+      this.openPracticalNoteForm(practicalNote);
+    }
+  }
+
+  deletePracticalNote(group: NoteGroup): void {
+    const practicalNote = this.filteredNotes.find(
+      (note) =>
+        note.id_apprentice === group.id_apprentice &&
+        note.id_training === group.id_training &&
+        this.getNoteType(note) === 'Stage'
+    );
+
+    if (practicalNote && practicalNote.id_note) {
+      this.deleteNote(practicalNote.id_note);
+    }
+  }
+
+  editTheoreticalNote(note: Note): void {
+    this.openMultipleNotesForm();
+    setTimeout(() => {
+      this.multipleNotesForm.patchValue({
+        id_apprentice: note.id_apprentice,
+        id_training: note.id_training,
+      });
+      this.onMultipleNotesSubmit();
+    }, 100);
+  }
+
+  // MÉTHODES EXISTANTES
+  applyFilters() {
+    if (this.notes.length === 0) {
+      this.filteredNotes = [];
+      this.groupedNotes = [];
+      return;
+    }
+
+    this.filteredNotes = this.notes.filter((note) => {
+      const matchesSearch =
+        !this.searchTerm ||
+        note.apprentice_last_name
+          ?.toLowerCase()
+          .includes(this.searchTerm.toLowerCase()) ||
+        note.apprentice_first_name
+          ?.toLowerCase()
+          .includes(this.searchTerm.toLowerCase()) ||
+        note.subject_name
+          ?.toLowerCase()
+          .includes(this.searchTerm.toLowerCase());
+
+      const matchesApprentice =
+        !this.filterApprentice || note.id_apprentice === this.filterApprentice;
+
+      const matchesTraining =
+        !this.filterTraining || note.id_training === this.filterTraining;
+
+      const matchesSubject =
+        !this.filterSubject || note.id_subject === this.filterSubject;
+
+      return (
+        matchesSearch && matchesApprentice && matchesTraining && matchesSubject
+      );
+    });
+
+    console.log(
+      `🔍 Filtered ${this.filteredNotes.length} notes from ${this.notes.length} total`
+    );
+
+    this.groupNotesByApprenticeAndTraining();
+  }
+
+  clearFilters() {
+    this.searchTerm = '';
+    this.filterApprentice = '';
+    this.filterTraining = '';
+    this.filterSubject = '';
+    this.filteredNotes = [...this.notes];
+    this.groupNotesByApprenticeAndTraining();
+    console.log('🧹 Filters cleared');
+  }
+
+  debugNotesData() {
+    console.log('🔍 DEBUG - Notes data analysis:');
+
+    if (this.notes.length === 0) {
+      console.log('❌ No notes available');
+      return;
+    }
+
+    console.log(`📊 Total notes: ${this.notes.length}`);
+
+    const noteTypes = {
+      theoretical: this.notes.filter(
+        (n) => n.theoretical_note !== null && n.practical_note === null
+      ).length,
+      practical: this.notes.filter(
+        (n) => n.theoretical_note === null && n.practical_note !== null
+      ).length,
+      mixed: this.notes.filter(
+        (n) => n.theoretical_note !== null && n.practical_note !== null
+      ).length,
+      none: this.notes.filter(
+        (n) => n.theoretical_note === null && n.practical_note === null
+      ).length,
+    };
+
+    console.log('📝 Note types analysis:');
+    console.log(`   - Théorique seulement: ${noteTypes.theoretical}`);
+    console.log(`   - Pratique seulement: ${noteTypes.practical}`);
+    console.log(`   - Mixte: ${noteTypes.mixed}`);
+    console.log(`   - Aucune note: ${noteTypes.none}`);
+
+    const potentialStageNotes = this.notes.filter(
+      (note) => note.theoretical_note === null && note.practical_note !== null
+    );
+
+    console.log('🎯 Potential stage notes:');
+    potentialStageNotes.forEach((note) => {
+      const apprenticeTheoreticalNotes = this.notes.filter(
+        (n) =>
+          n.id_apprentice === note.id_apprentice &&
+          n.id_training === note.id_training &&
+          n.theoretical_note !== null
+      );
+
+      console.log(
+        `   - ${note.apprentice_first_name} ${note.apprentice_last_name} - ${note.subject_name}: ${note.practical_note}/20 (${apprenticeTheoreticalNotes.length} notes théoriques)`
+      );
+    });
+
+    const notesByApprentice = this.notes.reduce((acc, note) => {
+      const key = `${note.apprentice_first_name || 'Unknown'} ${
+        note.apprentice_last_name || 'Apprentice'
+      }`;
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(note);
+      return acc;
+    }, {} as any);
+
+    console.log('👥 Notes by apprentice:');
+    Object.keys(notesByApprentice).forEach((apprentice) => {
+      console.log(
+        `   ${apprentice}: ${notesByApprentice[apprentice].length} notes`
+      );
+    });
+
+    console.log('📝 First 3 notes details:');
+    this.notes.slice(0, 3).forEach((note, index) => {
+      console.log(`   Note ${index + 1}:`, {
+        id_note: note.id_note,
+        id_apprentice: note.id_apprentice,
+        id_subject: note.id_subject,
+        theoretical_note: note.theoretical_note,
+        practical_note: note.practical_note,
+        average: note.average,
+        subject_name: note.subject_name,
+        apprentice_first_name: note.apprentice_first_name,
+        apprentice_last_name: note.apprentice_last_name,
+        note_type: this.getNoteType(note),
+      });
+    });
+  }
+
+  getNoteType(note: Note): string {
+    if (note.theoretical_note !== null && note.practical_note !== null) {
+      return 'Mixte';
+    } else if (note.theoretical_note !== null) {
+      return 'Théorique';
+    } else if (note.practical_note !== null) {
+      const isStageNote = this.isStageNote(note);
+      return isStageNote ? 'Stage' : 'Pratique';
+    }
+    return 'Non noté';
+  }
+
+  private isStageNote(note: Note): boolean {
+    if (note.theoretical_note !== null || note.practical_note === null) {
+      return false;
+    }
+
+    const apprenticeTheoreticalNotes = this.notes.filter(
+      (n) =>
+        n.id_apprentice === note.id_apprentice &&
+        n.id_training === note.id_training &&
+        n.theoretical_note !== null &&
+        n.id_note !== note.id_note
+    );
+
+    return apprenticeTheoreticalNotes.length > 0;
+  }
+
+  getNoteTypeClass(note: Note): string {
+    const noteType = this.getNoteType(note);
+    switch (noteType) {
+      case 'Théorique':
+        return 'type-theoretical';
+      case 'Pratique':
+        return 'type-practical';
+      case 'Stage':
+        return 'type-stage';
+      case 'Mixte':
+        return 'type-mixed';
+      default:
+        return 'type-none';
+    }
+  }
+
+  openPracticalNoteForm(note?: Note) {
+    console.log('📝 Opening practical note form for note:', note);
+
+    this.isEditing = !!note;
+    this.currentNoteId = note?.id_note;
+
+    if (note) {
+      this.practicalNoteForm.patchValue({
+        id_apprentice: note.id_apprentice,
+        id_training: note.id_training,
+        practical_note: note.practical_note,
+      });
+      console.log(
+        '📝 Practical form patched with note data:',
+        this.practicalNoteForm.value
+      );
+    } else {
+      this.practicalNoteForm.reset();
+      console.log('📝 Practical form reset for new note');
+    }
+
+    this.showForm = true;
+  }
+
+  async onPracticalNoteSubmit() {
+    console.log('🚀 Submitting practical note form...');
+    console.log('Practical form valid:', this.practicalNoteForm.valid);
+    console.log('Practical form values:', this.practicalNoteForm.value);
+    console.log('Practical form errors:', this.practicalNoteForm.errors);
+
+    if (this.practicalNoteForm.invalid) {
+      console.log('❌ Practical form is invalid, marking touched...');
+      this.markFormGroupTouched(this.practicalNoteForm);
+
+      Object.keys(this.practicalNoteForm.controls).forEach((key) => {
+        const control = this.practicalNoteForm.get(key);
+        if (control?.invalid) {
+          console.log(`Field ${key} errors:`, control.errors);
+        }
+      });
+      return;
+    }
+
+    this.isLoading = true;
+    try {
+      const formData = this.practicalNoteForm.value;
+      console.log('📤 Submitting practical form data:', formData);
+
+      const firstSubject = this.subjects.find(
+        (s) => s.id_training === formData.id_training
+      );
+      if (!firstSubject) {
+        this.showError('Aucune matière trouvée pour cette formation');
+        return;
+      }
+
+      const noteData: CreateNoteRequest = {
+        id_apprentice: formData.id_apprentice,
+        id_subject: firstSubject.id_subject,
+        theoretical_note: null,
+        practical_note: formData.practical_note,
+      };
+
+      let response;
+      if (this.isEditing && this.currentNoteId) {
+        response = await this.noteService
+          .updateNote(this.currentNoteId, noteData)
+          .toPromise();
+      } else {
+        response = await this.noteService.createNote(noteData).toPromise();
+      }
+
+      if (response?.success) {
+        console.log('✅ Practical note saved successfully');
+        this.showSuccess(
+          this.isEditing
+            ? 'Note pratique modifiée avec succès'
+            : 'Note pratique créée avec succès'
+        );
+        this.closePracticalNoteForm();
+        this.loadData();
+      } else {
+        console.error('❌ Error saving practical note:', response?.error);
+        this.showError(response?.error || "Erreur lors de l'opération");
+      }
+    } catch (error: any) {
+      console.error('💥 Error in practical form submission:', error);
+      this.showError(error?.error?.error || "Erreur lors de l'enregistrement");
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
+  closePracticalNoteForm() {
+    this.showForm = false;
+    this.isEditing = false;
+    this.currentNoteId = undefined;
+    this.practicalNoteForm.reset();
+    console.log('📝 Practical note form closed');
+  }
+
+  openMultipleNotesForm() {
+    this.showMultipleNotesSelection = true;
+    this.multipleNotesForm.reset();
+    this.practicalNoteTraining = null;
+    console.log('📝 Multiple notes form opened');
+  }
+
+  closeMultipleNotesSelection() {
+    this.showMultipleNotesSelection = false;
+    this.multipleNotesForm.reset();
+    console.log('📝 Multiple notes selection closed');
+  }
+
+  async onMultipleNotesSubmit() {
+    console.log('🚀 Submitting multiple notes selection...');
+    console.log('Multiple form valid:', this.multipleNotesForm.valid);
+    console.log('Multiple form values:', this.multipleNotesForm.value);
+
+    if (this.multipleNotesForm.invalid) {
+      console.log('❌ Multiple form is invalid');
+      this.markFormGroupTouched(this.multipleNotesForm);
+      return;
+    }
+
+    this.isLoading = true;
+    try {
+      const formValue = this.multipleNotesForm.value;
+      console.log('📤 Processing multiple notes for:', formValue);
+
+      if (!this.apprentices.length || !this.subjects.length) {
+        console.error('❌ No data available for form');
+        this.showError('Données non disponibles pour le formulaire');
+        return;
+      }
+
+      this.selectedApprentice = this.apprentices.find(
+        (a) => a.id_apprentice === formValue.id_apprentice
+      );
+      this.selectedTraining = this.trainings.find(
+        (f) => f.id_training === formValue.id_training
+      );
+
+      console.log('👤 Selected apprentice:', this.selectedApprentice);
+      console.log('🎓 Selected training:', this.selectedTraining);
+
+      if (!this.selectedApprentice || !this.selectedTraining) {
+        console.error('❌ Selection not found');
+        this.showError('Sélection non trouvée');
+        return;
+      }
+
+      await this.prepareSubjectsWithNotes(
+        formValue.id_training,
+        formValue.id_apprentice
+      );
+
+      this.showMultipleNotesSelection = false;
+      this.showMultipleNotesForm = true;
+      console.log('✅ Multiple notes form ready');
+    } catch (error: any) {
+      console.error('💥 Error in multiple notes:', error);
+      this.showError('Erreur: ' + error.message);
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
+  private async prepareSubjectsWithNotes(
+    id_training: string,
+    id_apprentice: string
+  ) {
+    const trainingSubjects = this.subjects.filter(
+      (subject) => subject.id_training === id_training
+    );
+
+    const theoreticalNotesApprentice = this.notes.filter(
+      (note) =>
+        note.id_apprentice === id_apprentice && note.theoretical_note !== null
+    );
+
+    this.subjectsWithNotes = trainingSubjects.map((subject) => {
+      const existingTheoreticalNote = theoreticalNotesApprentice.find(
+        (note) => note.id_subject === subject.id_subject
+      );
+
+      return {
+        id_subject: subject.id_subject,
+        subject_name: subject.subject_name,
+        coefficient: subject.coefficient,
+        theoretical_note:
+          existingTheoreticalNote?.theoretical_note !== null &&
+          existingTheoreticalNote?.theoretical_note !== undefined
+            ? Number(existingTheoreticalNote.theoretical_note)
+            : null,
+        has_note: !!existingTheoreticalNote,
+      };
+    });
+
+    console.log('📚 Subjects with notes prepared:', this.subjectsWithNotes);
+  }
+
+  async saveMultipleNotes() {
+    this.isLoading = true;
+    try {
+      const formValue = this.multipleNotesForm.value;
+      const id_apprentice = formValue.id_apprentice;
+      const id_training = formValue.id_training;
+
+      const notesToSave: CreateNoteRequest[] = [];
+
+      this.subjectsWithNotes.forEach((subject) => {
+        if (
+          subject.theoretical_note !== null &&
+          subject.theoretical_note !== undefined
+        ) {
+          notesToSave.push({
+            id_apprentice: id_apprentice,
+            id_subject: subject.id_subject,
+            theoretical_note: subject.theoretical_note,
+            practical_note: null,
+          });
+        }
+      });
+
+      if (notesToSave.length === 0) {
+        this.showError('Aucune note théorique à enregistrer');
+        this.isLoading = false;
+        return;
+      }
+
+      console.log('💾 Theoretical notes to save:', notesToSave);
+
+      const response = await this.noteService
+        .createOrUpdateMultiple(notesToSave)
+        .toPromise();
+
+      if (response?.success) {
+        this.showSuccess(
+          `Notes théoriques enregistrées avec succès (${notesToSave.length} note(s))`
+        );
+        this.closeMultipleNotesForm();
+        this.loadData();
+      } else {
+        this.showError(
+          response?.error ||
+            "Erreur lors de l'enregistrement des notes théoriques"
+        );
+      }
+    } catch (error: any) {
+      console.error('💥 Error saving theoretical notes:', error);
+      this.showError(
+        error?.error?.error ||
+          "Erreur lors de l'enregistrement des notes théoriques"
+      );
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
+  closeMultipleNotesForm() {
+    this.showMultipleNotesForm = false;
+    this.subjectsWithNotes = [];
+    this.selectedApprentice = undefined;
+    this.selectedTraining = undefined;
+    this.multipleNotesForm.reset();
+    console.log('📝 Multiple notes form closed');
+  }
+
+  updateSubjectNote(index: number, event: Event) {
+    if (this.subjectsWithNotes[index]) {
+      const input = event.target as HTMLInputElement;
+      const value = input.value;
+      const numericValue = value === '' ? null : Number(value);
+
+      if (numericValue !== null && (numericValue < 0 || numericValue > 20)) {
+        return;
+      }
+
+      this.subjectsWithNotes[index].theoretical_note = numericValue;
+    }
+  }
+
+  canSaveMultipleNotes(): boolean {
+    return this.subjectsWithNotes.some(
+      (subject) =>
+        subject.theoretical_note !== null &&
+        subject.theoretical_note !== undefined
+    );
+  }
+
+  calculateEstimatedOverallAverage(): number {
+    let totalCoefficient = 0;
+    let totalPoints = 0;
+
+    this.subjectsWithNotes.forEach((subject) => {
+      if (
+        subject.theoretical_note !== null &&
+        subject.theoretical_note !== undefined
+      ) {
+        totalPoints += subject.theoretical_note * subject.coefficient;
+        totalCoefficient += subject.coefficient;
+      }
+    });
+
+    return totalCoefficient > 0 ? totalPoints / totalCoefficient : 0;
+  }
+
+  calculateSubjectAverage(theoreticalNote: number | null): number {
+    return theoreticalNote !== null && theoreticalNote !== undefined
+      ? theoreticalNote
+      : 0;
+  }
+
+  deleteNote(id: string) {
+    const note = this.notes.find((n) => n.id_note === id);
+    if (note) {
+      this.noteToDelete = id;
+      this.dialogMessage = `Êtes-vous sûr de vouloir supprimer la note de ${note.apprentice_first_name} ${note.apprentice_last_name} en ${note.subject_name} ?`;
+      this.showDeleteConfirm = true;
+    }
+  }
+
+  async confirmDelete() {
+    if (!this.noteToDelete) return;
+
+    this.isLoading = true;
+    try {
+      const response = await this.noteService
+        .deleteNote(this.noteToDelete)
+        .toPromise();
+      if (response?.success) {
+        this.showSuccess('Note supprimée avec succès');
+        this.loadData();
+      } else {
+        this.showError(response?.error || 'Erreur lors de la suppression');
+      }
+    } catch (error: any) {
+      console.error('Error:', error);
+      this.showError(error?.error?.error || 'Erreur lors de la suppression');
+    } finally {
+      this.isLoading = false;
+      this.showDeleteConfirm = false;
+      this.noteToDelete = undefined;
+    }
+  }
+
+  cancelDelete() {
+    this.showDeleteConfirm = false;
+    this.noteToDelete = undefined;
+  }
+
+  showSuccess(message: string) {
+    this.dialogMessage = message;
+    this.showSuccessDialog = true;
+  }
+
+  showError(message: string) {
+    this.dialogMessage = message;
+    this.showErrorDialog = true;
+  }
+
+  closeDialog() {
+    this.showSuccessDialog = false;
+    this.showErrorDialog = false;
+    this.dialogMessage = '';
+  }
+
+  markFormGroupTouched(formGroup: FormGroup) {
+    Object.keys(formGroup.controls).forEach((key) => {
+      const control = formGroup.get(key);
+      if (control) {
+        control.markAsTouched();
+      }
+    });
+  }
+
+  isFieldInvalid(form: FormGroup, fieldName: string): boolean {
+    const field = form.get(fieldName);
+    return !!(field && field.invalid && (field.dirty || field.touched));
+  }
+
+  getFieldError(form: FormGroup, fieldName: string): string {
+    const field = form.get(fieldName);
+    if (field?.errors?.['required']) {
+      return 'Ce champ est obligatoire';
+    }
+    if (field?.errors?.['min']) {
+      return 'La note ne peut pas être négative';
+    }
+    if (field?.errors?.['max']) {
+      return 'La note ne peut pas dépasser 20';
+    }
+    return 'Erreur de validation';
+  }
+
+  calculateAverage(note: Note): number | null {
+    if (note.theoretical_note !== null && note.practical_note !== null) {
+      return (note.theoretical_note + note.practical_note) / 2;
+    } else if (note.theoretical_note !== null) {
+      return note.theoretical_note;
+    } else if (note.practical_note !== null) {
+      return note.practical_note;
+    }
+    return null;
+  }
+
+  getMention(average: number | null): string {
+    if (average === null) return 'Non noté';
+    if (average >= 16) return 'Très Bien';
+    if (average >= 14) return 'Bien';
+    if (average >= 12) return 'Assez Bien';
+    if (average >= 10) return 'Passable';
+    return 'Insuffisant';
+  }
+
+  getNoteColor(note: number | null): string {
+    if (note === null || note === undefined) return 'gray';
+    if (note >= 16) return 'excellent';
+    if (note >= 14) return 'good';
+    if (note >= 10) return 'fair';
+    return 'fail';
+  }
+
+  getMentionClass(mention: string): string {
+    if (!mention) return 'mention-default';
+
+    switch (mention.toLowerCase()) {
+      case 'très bien':
+        return 'mention-excellent';
+      case 'bien':
+        return 'mention-good';
+      case 'assez bien':
+        return 'mention-fair';
+      case 'passable':
+        return 'mention-passable';
+      case 'insuffisant':
+        return 'mention-fail';
+      default:
+        return 'mention-default';
+    }
+  }
+
+  testFormSelection() {
+    console.log('🧪 Testing form selections:');
+    console.log('Apprentices:', this.apprentices);
+    console.log('Trainings:', this.trainings);
+    console.log('Subjects:', this.subjects);
+    console.log('Practical note form valid:', this.practicalNoteForm.valid);
+    console.log('Practical note form values:', this.practicalNoteForm.value);
+    console.log('Multiple notes form valid:', this.multipleNotesForm.valid);
+    console.log('Multiple notes form values:', this.multipleNotesForm.value);
+  }
+
+  reloadNotes() {
+    console.log('🔄 Forcing notes reload...');
+    this.loadData();
+  }
+
+  debugRawData() {
+    console.log('🔍 Getting raw API data...');
+    this.noteService.debugRawNotes().subscribe({
+      next: (response) => {
+        console.log('✅ Raw data received:', response);
+      },
+      error: (error) => {
+        console.error('❌ Error getting raw data:', error);
+      },
+    });
+  }
+}
+<div class="page-container">
+  <!-- Boutons de debug temporaires -->
+  <div
+    style="
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 1000;
+      background: white;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    "
+  >
+    <button
+      class="btn-secondary"
+      (click)="debugNotesData()"
+      style="margin: 2px; padding: 5px 8px; font-size: 12px"
+    >
+      🐛 Debug Notes
+    </button>
+    <button
+      class="btn-secondary"
+      (click)="reloadNotes()"
+      style="margin: 2px; padding: 5px 8px; font-size: 12px"
+    >
+      🔄 Reload Notes
+    </button>
+    <button
+      class="btn-secondary"
+      (click)="testFormSelection()"
+      style="margin: 2px; padding: 5px 8px; font-size: 12px"
+    >
+      🧪 Test Form
+    </button>
+    <button
+      class="btn-secondary"
+      (click)="debugRawData()"
+      style="margin: 2px; padding: 5px 8px; font-size: 12px"
+    >
+      🔍 Raw API Data
+    </button>
+  </div>
+
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-text">
+        <h1>Gestion des Notes</h1>
+        <p class="subtitle">Saisie des notes théoriques et pratiques</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn-secondary" (click)="openMultipleNotesForm()">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+            <path
+              fill-rule="evenodd"
+              d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
+            />
+          </svg>
+          Saisie Multiple (Théoriques)
+        </button>
+        <button class="btn-primary" (click)="openPracticalNoteForm()">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+            <path
+              fill-rule="evenodd"
+              d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
+            />
+          </svg>
+          Note Pratique
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recherche et Filtres -->
+  <div class="filters-bar">
+    <div class="filters-header">
+      <h3>Filtres</h3>
+      <button class="btn-clear" (click)="clearFilters()">Réinitialiser</button>
+    </div>
+    <div class="filters-row">
+      <div class="search-box">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+          <path
+            fill-rule="evenodd"
+            d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+          />
+        </svg>
+        <input
+          type="text"
+          placeholder="Rechercher par apprenti ou matière..."
+          [(ngModel)]="searchTerm"
+          (input)="applyFilters()"
+        />
+      </div>
+
+      <div class="filter-group">
+        <label>Formation</label>
+        <select
+          [(ngModel)]="filterTraining"
+          (change)="applyFilters()"
+          class="filter-select"
+        >
+          <option value="">Toutes les formations</option>
+          <option
+            *ngFor="let training of trainings"
+            [value]="training.id_training"
+          >
+            {{ training.metier }}
+          </option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label>Apprenti</label>
+        <select
+          [(ngModel)]="filterApprentice"
+          (change)="applyFilters()"
+          class="filter-select"
+        >
+          <option value="">Tous les apprentis</option>
+          <option
+            *ngFor="let apprentice of apprentices"
+            [value]="apprentice.id_apprentice"
+          >
+            {{ apprentice.first_name }} {{ apprentice.last_name }}
+          </option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label>Matière</label>
+        <select
+          [(ngModel)]="filterSubject"
+          (change)="applyFilters()"
+          class="filter-select"
+        >
+          <option value="">Toutes les matières</option>
+          <option *ngFor="let subject of subjects" [value]="subject.id_subject">
+            {{ subject.subject_name }}
+          </option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tableau des notes -->
+  <div class="table-container">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Apprenti</th>
+          <th>Formation</th>
+          <th>Matière</th>
+          <th class="text-center">Coefficient</th>
+          <th class="text-center">Note Théorique</th>
+          <th class="text-center">Type de Note</th>
+          <th class="text-center">Moyenne</th>
+          <th class="text-center">Mention</th>
+          <th class="actions-col">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Grouper les notes par apprenti et formation -->
+        <ng-container
+          *ngFor="let group of groupedNotes; let groupIndex = index"
+        >
+          <!-- Afficher la note pratique une fois par groupe -->
+          <tr *ngIf="hasPracticalNote(group)" class="practical-note-row">
+            <td colspan="4" class="practical-note-header">
+              <strong>Note Pratique (Stage/Rapport)</strong>
+            </td>
+            <td
+              class="text-center practical-note-value"
+              [attr.colspan]="getPracticalNoteColspan(group)"
+            >
+              <span
+                class="note-badge"
+                [class]="getNoteColor(group.practicalNote)"
+              >
+                {{ group.practicalNote | number : "1.2-2" }}/20
+              </span>
+            </td>
+            <td colspan="4" class="practical-note-actions">
+              <div class="action-buttons">
+                <button
+                  class="btn-action edit"
+                  (click)="editPracticalNote(group)"
+                  title="Modifier"
+                >
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"
+                    />
+                  </svg>
+                </button>
+                <button
+                  class="btn-action delete"
+                  (click)="deletePracticalNote(group)"
+                  title="Supprimer"
+                >
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Afficher chaque note théorique du groupe -->
+          <tr
+            *ngFor="let note of group.theoreticalNotes"
+            class="theoretical-note-row"
+          >
+            <td>
+              <div class="user-cell">
+                <div class="avatar">
+                  {{ note.apprentice_first_name?.[0]
+                  }}{{ note.apprentice_last_name?.[0] }}
+                </div>
+                <div class="user-details">
+                  <strong
+                    >{{ note.apprentice_first_name }}
+                    {{ note.apprentice_last_name }}</strong
+                  >
+                  <small>{{ note.email }}</small>
+                </div>
+              </div>
+            </td>
+            <td>{{ note.training_metier }}</td>
+            <td>
+              <strong>{{ note.subject_name }}</strong>
+              <small *ngIf="note.subject_description">{{
+                note.subject_description
+              }}</small>
+            </td>
+            <td class="text-center">
+              <span class="coefficient-badge">{{ note.coefficient || 1 }}</span>
+            </td>
+            <td class="text-center">
+              <span
+                class="note-badge"
+                [class]="getNoteColor(note.theoretical_note)"
+              >
+                {{
+                  note.theoretical_note !== null &&
+                  note.theoretical_note !== undefined
+                    ? (note.theoretical_note | number : "1.2-2") + "/20"
+                    : "N/A"
+                }}
+              </span>
+            </td>
+            <td class="text-center">
+              <span class="type-badge" [class]="getNoteTypeClass(note)">
+                {{ getNoteType(note) }}
+              </span>
+            </td>
+            <td class="text-center">
+              <span
+                class="note-badge"
+                [class]="
+                  getNoteColor(
+                    calculateAverageWithPractical(note, group.practicalNote)
+                  )
+                "
+              >
+                {{
+                  calculateAverageWithPractical(note, group.practicalNote) !==
+                  null
+                    ? (calculateAverageWithPractical(note, group.practicalNote)!
+                        | number : "1.2-2") + "/20"
+                    : "N/A"
+                }}
+              </span>
+            </td>
+            <td class="text-center">
+              <span
+                class="mention-badge"
+                [class]="
+                  getMentionClass(
+                    getMention(
+                      calculateAverageWithPractical(note, group.practicalNote)
+                    )
+                  )
+                "
+              >
+                {{
+                  getMention(
+                    calculateAverageWithPractical(note, group.practicalNote)
+                  )
+                }}
+              </span>
+            </td>
+            <td class="actions-cell">
+              <div class="action-buttons">
+                <button
+                  class="btn-action edit"
+                  (click)="editTheoreticalNote(note)"
+                  title="Modifier"
+                >
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"
+                    />
+                  </svg>
+                </button>
+                <button
+                  class="btn-action delete"
+                  (click)="deleteNote(note.id_note!)"
+                  title="Supprimer"
+                >
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Ligne de moyenne générale pour le groupe -->
+          <tr
+            *ngIf="group.theoreticalNotes.length > 0"
+            class="overall-average-row"
+          >
+            <td colspan="4" class="overall-average-header">
+              <strong>Moyenne Générale</strong>
+            </td>
+            <td colspan="5" class="overall-average-value">
+              <div class="overall-average-content">
+                <span class="average-label">Moyenne Générale:</span>
+                <span
+                  class="note-badge overall-badge"
+                  [class]="getNoteColor(calculateOverallAverage(group))"
+                >
+                  {{ calculateOverallAverage(group) | number : "1.2-2" }}/20
+                </span>
+                <span
+                  class="mention-badge overall-mention"
+                  [class]="
+                    getMentionClass(getMention(calculateOverallAverage(group)))
+                  "
+                >
+                  {{ getMention(calculateOverallAverage(group)) }}
+                </span>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Ligne vide pour séparer les groupes -->
+          <tr
+            *ngIf="groupIndex < groupedNotes.length - 1"
+            class="group-separator"
+          >
+            <td
+              colspan="9"
+              style="height: 20px; background-color: #f8f9fa"
+            ></td>
+          </tr>
+        </ng-container>
+      </tbody>
+    </table>
+
+    <!-- État vide -->
+    <div class="empty-state" *ngIf="filteredNotes.length === 0 && !isLoading">
+      <div class="empty-icon">
+        <svg width="80" height="80" viewBox="0 0 20 20" fill="currentColor">
+          <path
+            fill-rule="evenodd"
+            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293z"
+          />
+        </svg>
+      </div>
+      <h3>Aucune note trouvée</h3>
+      <p
+        *ngIf="
+          searchTerm || filterApprentice || filterTraining || filterSubject
+        "
+      >
+        Aucun résultat ne correspond à vos critères de recherche.
+      </p>
+      <p
+        *ngIf="
+          !searchTerm && !filterApprentice && !filterTraining && !filterSubject
+        "
+      >
+        Commencez par ajouter votre première note.
+      </p>
+      <button class="btn-primary" (click)="openPracticalNoteForm()">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+          <path
+            fill-rule="evenodd"
+            d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
+          />
+        </svg>
+        Ajouter la première note
+      </button>
+    </div>
+
+    <!-- État de chargement -->
+    <div class="loading-state" *ngIf="isLoading">
+      <div class="loading-spinner"></div>
+      <p>Chargement des notes...</p>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Formulaire Note Pratique -->
+<div class="modal-overlay" *ngIf="showForm" (click)="closePracticalNoteForm()">
+  <div class="modal-container" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>{{ isEditing ? "Modifier" : "Ajouter" }} une Note Pratique</h2>
+      <button class="btn-close" (click)="closePracticalNoteForm()">
+        <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+          <path
+            fill-rule="evenodd"
+            d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+          />
+        </svg>
+      </button>
+    </div>
+
+    <form
+      [formGroup]="practicalNoteForm"
+      (ngSubmit)="onPracticalNoteSubmit()"
+      class="modal-body"
+    >
+      <div class="form-section">
+        <div class="section-header">
+          <h3>Note Pratique de Formation</h3>
+          <p class="section-subtitle">
+            Saisissez la note pratique (stage/rapport) pour un apprenti
+          </p>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="id_apprentice" class="form-label">
+              Apprenti <span class="required">*</span>
+            </label>
+            <select
+              id="id_apprentice"
+              formControlName="id_apprentice"
+              [class.error]="isFieldInvalid(practicalNoteForm, 'id_apprentice')"
+              class="form-select"
+            >
+              <option value="">Sélectionner un apprenti</option>
+              <option
+                *ngFor="let apprentice of apprentices"
+                [value]="apprentice.id_apprentice"
+              >
+                {{ apprentice.first_name }} {{ apprentice.last_name }}
+              </option>
+            </select>
+            <div
+              class="error-message"
+              *ngIf="isFieldInvalid(practicalNoteForm, 'id_apprentice')"
+            >
+              {{ getFieldError(practicalNoteForm, "id_apprentice") }}
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="id_training" class="form-label">
+              Formation <span class="required">*</span>
+            </label>
+            <select
+              id="id_training"
+              formControlName="id_training"
+              [class.error]="isFieldInvalid(practicalNoteForm, 'id_training')"
+              class="form-select"
+            >
+              <option value="">Sélectionner une formation</option>
+              <option
+                *ngFor="let training of trainings"
+                [value]="training.id_training"
+              >
+                {{ training.metier }}
+              </option>
+            </select>
+            <div
+              class="error-message"
+              *ngIf="isFieldInvalid(practicalNoteForm, 'id_training')"
+            >
+              {{ getFieldError(practicalNoteForm, "id_training") }}
+            </div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group full-width">
+            <label for="practical_note" class="form-label">
+              Note Pratique (Stage/Rapport) <span class="required">*</span>
+            </label>
+            <input
+              id="practical_note"
+              type="number"
+              formControlName="practical_note"
+              step="0.01"
+              min="0"
+              max="20"
+              placeholder="0.00 - 20.00"
+              [class.error]="
+                isFieldInvalid(practicalNoteForm, 'practical_note')
+              "
+              class="form-input"
+            />
+            <div
+              class="error-message"
+              *ngIf="isFieldInvalid(practicalNoteForm, 'practical_note')"
+            >
+              {{ getFieldError(practicalNoteForm, "practical_note") }}
+            </div>
+            <small class="form-help">
+              Note pratique unique pour la formation (stage ou rapport de fin de
+              formation)
+            </small>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button
+          type="button"
+          class="btn-secondary"
+          (click)="closePracticalNoteForm()"
+        >
+          Annuler
+        </button>
+        <button
+          type="submit"
+          class="btn-primary"
+          [disabled]="isLoading || practicalNoteForm.invalid"
+        >
+          <span *ngIf="!isLoading">{{
+            isEditing ? "Modifier" : "Enregistrer"
+          }}</span>
+          <span *ngIf="isLoading" class="loading-text">
+            <div class="button-spinner"></div>
+            Enregistrement...
+          </span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal de sélection pour la saisie multiple -->
+<div class="modal-overlay" *ngIf="showMultipleNotesSelection">
+  <div class="modal-container" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Saisie Multiple - Sélection</h2>
+      <button class="btn-close" (click)="closeMultipleNotesSelection()">
+        <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+          <path
+            fill-rule="evenodd"
+            d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+          />
+        </svg>
+      </button>
+    </div>
+
+    <form
+      [formGroup]="multipleNotesForm"
+      (ngSubmit)="onMultipleNotesSubmit()"
+      class="modal-body"
+    >
+      <div class="form-section">
+        <div class="section-header">
+          <h3>Sélectionnez la formation et l'apprenti</h3>
+          <p class="section-subtitle">
+            Vous pourrez ensuite saisir les notes théoriques pour toutes les
+            matières de cette formation
+          </p>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="multiple_id_training" class="form-label">
+              Formation <span class="required">*</span>
+            </label>
+            <select
+              id="multiple_id_training"
+              formControlName="id_training"
+              [class.error]="isFieldInvalid(multipleNotesForm, 'id_training')"
+              class="form-select"
+            >
+              <option value="">Sélectionner une formation</option>
+              <option
+                *ngFor="let training of trainings"
+                [value]="training.id_training"
+              >
+                {{ training.metier }}
+              </option>
+            </select>
+            <div
+              class="error-message"
+              *ngIf="isFieldInvalid(multipleNotesForm, 'id_training')"
+            >
+              {{ getFieldError(multipleNotesForm, "id_training") }}
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="multiple_id_apprentice" class="form-label">
+              Apprenti <span class="required">*</span>
+            </label>
+            <select
+              id="multiple_id_apprentice"
+              formControlName="id_apprentice"
+              [class.error]="isFieldInvalid(multipleNotesForm, 'id_apprentice')"
+              class="form-select"
+            >
+              <option value="">Sélectionner un apprenti</option>
+              <option
+                *ngFor="let apprentice of apprentices"
+                [value]="apprentice.id_apprentice"
+              >
+                {{ apprentice.first_name }} {{ apprentice.last_name }}
+              </option>
+            </select>
+            <div
+              class="error-message"
+              *ngIf="isFieldInvalid(multipleNotesForm, 'id_apprentice')"
+            >
+              {{ getFieldError(multipleNotesForm, "id_apprentice") }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button
+          type="button"
+          class="btn-secondary"
+          (click)="closeMultipleNotesSelection()"
+        >
+          Annuler
+        </button>
+        <button
+          type="submit"
+          class="btn-primary"
+          [disabled]="isLoading || multipleNotesForm.invalid"
+        >
+          <span *ngIf="!isLoading">Continuer vers la saisie</span>
+          <span *ngIf="isLoading" class="loading-text">
+            <div class="button-spinner"></div>
+            Chargement...
+          </span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Saisie Multiple des Notes Théoriques -->
+<div
+  class="modal-overlay"
+  *ngIf="showMultipleNotesForm"
+  (click)="closeMultipleNotesForm()"
+>
+  <div class="modal-container large" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Saisie Multiple des Notes Théoriques</h2>
+      <button class="btn-close" (click)="closeMultipleNotesForm()">
+        <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+          <path
+            fill-rule="evenodd"
+            d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+          />
+        </svg>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div class="multiple-notes-header">
+        <div class="student-info">
+          <div class="avatar large">
+            {{ selectedApprentice?.first_name?.[0]
+            }}{{ selectedApprentice?.last_name?.[0] }}
+          </div>
+          <div>
+            <h3>
+              {{ selectedApprentice?.first_name }}
+              {{ selectedApprentice?.last_name }}
+            </h3>
+            <p class="formation-name">{{ selectedTraining?.metier }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Aperçu de la moyenne générale -->
+      <div
+        class="moyenne-generale-preview"
+        *ngIf="subjectsWithNotes.length > 0"
+      >
+        <div class="preview-card">
+          <div class="preview-header">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+              <path
+                fill-rule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.414-1.414L11 9.586V6z"
+              />
+            </svg>
+            <span>Aperçu de la moyenne générale (notes théoriques)</span>
+          </div>
+          <div class="preview-content">
+            <div class="preview-row">
+              <span>Moyenne estimée:</span>
+              <span class="moyenne-estimee">
+                {{ calculateEstimatedOverallAverage() | number : "1.2-2" }}/20
+              </span>
+            </div>
+            <div class="preview-row">
+              <span>Mention estimée:</span>
+              <span
+                class="mention-estimee"
+                [class]="
+                  getMentionClass(
+                    getMention(calculateEstimatedOverallAverage())
+                  )
+                "
+              >
+                {{ getMention(calculateEstimatedOverallAverage()) }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tableau des matières théoriques -->
+      <div class="table-container">
+        <div class="table-section-header">
+          <h3>Notes Théoriques par Matière</h3>
+          <p class="section-subtitle">
+            Saisissez les notes théoriques pour chaque matière
+          </p>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Matière</th>
+              <th class="text-center">Coefficient</th>
+              <th class="text-center">Note Théorique</th>
+              <th class="text-center">Moyenne Matière</th>
+              <th class="text-center">Statut</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let subject of subjectsWithNotes; let i = index">
+              <td>
+                <strong>{{ subject.subject_name }}</strong>
+              </td>
+              <td class="text-center">
+                <span class="coefficient-badge">{{ subject.coefficient }}</span>
+              </td>
+              <td class="text-center">
+                <input
+                  type="number"
+                  [value]="subject.theoretical_note"
+                  (input)="updateSubjectNote(i, $event)"
+                  step="0.01"
+                  min="0"
+                  max="20"
+                  placeholder="0.00"
+                  class="note-input"
+                  [class.has-note]="subject.has_note"
+                />
+              </td>
+              <td class="text-center">
+                <span class="moyenne-preview">
+                  {{
+                    calculateSubjectAverage(subject.theoretical_note)
+                      | number : "1.2-2"
+                  }}/20
+                </span>
+              </td>
+              <td class="text-center">
+                <span class="status-badge" [class.has-notes]="subject.has_note">
+                  {{ subject.has_note ? "Déjà noté" : "À saisir" }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="modal-footer">
+        <button
+          type="button"
+          class="btn-secondary"
+          (click)="closeMultipleNotesForm()"
+        >
+          Annuler
+        </button>
+        <button
+          type="button"
+          class="btn-primary"
+          (click)="saveMultipleNotes()"
+          [disabled]="isLoading || !canSaveMultipleNotes()"
+        >
+          <span *ngIf="!isLoading"
+            >Enregistrer toutes les notes théoriques</span
+          >
+          <span *ngIf="isLoading" class="loading-text">
+            <div class="button-spinner"></div>
+            Enregistrement...
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Dialogs de confirmation et messages -->
+<div class="modal-overlay" *ngIf="showDeleteConfirm">
+  <div class="modal-container confirmation-modal">
+    <div class="modal-header">
+      <h2>Confirmer la suppression</h2>
+      <button class="btn-close" (click)="cancelDelete()">×</button>
+    </div>
+    <div class="modal-body">
+      <p>{{ dialogMessage }}</p>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-secondary" (click)="cancelDelete()">
+        Annuler
+      </button>
+      <button type="button" class="btn-danger" (click)="confirmDelete()">
+        Supprimer
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" *ngIf="showSuccessDialog">
+  <div class="modal-container success-modal">
+    <div class="modal-body">
+      <p>{{ dialogMessage }}</p>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-primary" (click)="closeDialog()">
+        OK
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" *ngIf="showErrorDialog">
+  <div class="modal-container error-modal">
+    <div class="modal-body">
+      <p>{{ dialogMessage }}</p>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-primary" (click)="closeDialog()">
+        OK
+      </button>
+    </div>
+  </div>
+</div>

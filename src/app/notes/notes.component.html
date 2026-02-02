@@ -1,0 +1,1349 @@
+<div class="page-container">
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-text">
+        <h1>Gestion des Notes</h1>
+        <p class="subtitle">Saisie des notes théoriques et pratiques</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn-secondary" (click)="openMultipleNotesForm()">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+            <path
+              fill-rule="evenodd"
+              d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
+            />
+          </svg>
+          Saisie Multiple (Théoriques)
+        </button>
+        <button class="btn-primary" (click)="openPracticalNoteForm()">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+            <path
+              fill-rule="evenodd"
+              d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
+            />
+          </svg>
+          Note Pratique
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recherche et Filtres -->
+<div class="filters-bar">
+  <div class="filters-header">
+    <h3>Filtres</h3>
+    <button class="btn-clear" (click)="clearFilters()">Réinitialiser</button>
+  </div>
+  <div class="filters-row">
+    <!-- Filtre par type de formation -->
+    <div class="filter-group">
+      <label>Type de Formation</label>
+      <form [formGroup]="trainingTypeFilterForm">
+        <select formControlName="training_type" class="filter-select">
+          <option
+            *ngFor="let type of getAvailableTrainingTypes()"
+            [value]="type.value"
+          >
+            {{ type.label }}
+          </option>
+        </select>
+      </form>
+    </div>
+
+    <div class="search-box">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+        <path
+          fill-rule="evenodd"
+          d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+        />
+      </svg>
+      <input
+        type="text"
+        placeholder="Rechercher par apprenti ou matière..."
+        [(ngModel)]="searchTerm"
+        (input)="applyFilters()"
+      />
+    </div>
+
+    <div class="filter-group">
+      <label>Formation</label>
+      <select
+        [(ngModel)]="filterTraining"
+        (change)="applyFilters()"
+        class="filter-select"
+      >
+        <option value="">Toutes les formations</option>
+        <!-- CORRECTION : Utiliser filteredTrainings qui est mis à jour par le type -->
+        <option
+          *ngFor="let training of filteredTrainings"
+          [value]="training.id_training"
+        >
+          {{ getTrainingName(training) }}
+        </option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label>Apprenti</label>
+      <select
+        [(ngModel)]="filterApprentice"
+        (change)="applyFilters()"
+        class="filter-select"
+      >
+        <option value="">Tous les apprentis</option>
+        <!-- CORRECTION : Utiliser filteredApprentices qui est mis à jour par le type -->
+        <option
+          *ngFor="let apprentice of filteredApprentices"
+          [value]="apprentice.id_apprentice"
+        >
+          {{ getApprenticeName(apprentice) }}
+        </option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label>Matière</label>
+      <select
+        [(ngModel)]="filterSubject"
+        (change)="applyFilters()"
+        class="filter-select"
+      >
+        <option value="">Toutes les matières</option>
+        <option *ngFor="let subject of subjects" [value]="subject.id_subject">
+          {{ getSubjectName(subject) }}
+        </option>
+      </select>
+    </div>
+  </div>
+</div>
+
+  <!-- Tableau des notes -->
+  <div class="table-container">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Apprenti</th>
+          <th>Formation</th>
+          <th>Type</th>
+          <th>Matière</th>
+          <th class="text-center">Coefficient</th>
+          <th class="text-center">Note Théorique</th>
+          <th class="text-center">Type de Note</th>
+          <th class="actions-col">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Grouper les notes par apprenti et formation -->
+        <ng-container
+          *ngFor="let group of groupedNotes; let groupIndex = index"
+        >
+          <!-- Afficher chaque note théorique du groupe -->
+          <tr
+            *ngFor="let noteItem of group.theoreticalNotes"
+            class="theoretical-note-row"
+            [class.hidden-theoretical]="!shouldShowTheoreticalSection(group)"
+          >
+            <td>
+              <div class="user-cell">
+                <div class="avatar">
+                  {{ getNoteApprenticeInitials(noteItem) }}
+                </div>
+                <div class="user-details">
+                  <strong>{{ getNoteApprenticeName(noteItem) }}</strong>
+                  <small>{{ noteItem.email || "Email non disponible" }}</small>
+                </div>
+              </div>
+            </td>
+            <td>{{ noteItem.training_metier || "Formation inconnue" }}</td>
+            <td>
+              <span
+                class="training-type-badge"
+                [class]="'type-' + group.trainingType"
+              >
+                {{ getTrainingTypeLabel(group.trainingType) }}
+              </span>
+            </td>
+            <td>
+              <strong>{{ getNoteSubjectName(noteItem) }}</strong>
+              <small *ngIf="noteItem.subject_description">{{
+                noteItem.subject_description
+              }}</small>
+            </td>
+            <td class="text-center">
+              <span class="coefficient-badge">{{
+                noteItem.coefficient || 1
+              }}</span>
+            </td>
+            <td class="text-center">
+              <span
+                class="note-badge"
+                [class]="getNoteColor(noteItem.theoretical_note)"
+              >
+                {{
+                  noteItem.theoretical_note !== null &&
+                  noteItem.theoretical_note !== undefined
+                    ? (noteItem.theoretical_note | number : "1.2-2") + "/20"
+                    : "N/A"
+                }}
+              </span>
+            </td>
+            <td class="text-center">
+              <span class="type-badge" [class]="getNoteTypeClass(noteItem)">
+                {{ getNoteType(noteItem) }}
+              </span>
+            </td>
+            <td class="actions-cell">
+              <div class="action-buttons">
+                <button
+                  class="btn-action edit"
+                  (click)="editTheoreticalNote(noteItem)"
+                  title="Modifier"
+                  *ngIf="shouldShowTheoreticalSection(group)"
+                >
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"
+                    />
+                  </svg>
+                </button>
+                <button
+                  class="btn-action delete"
+                  (click)="deleteNote(noteItem.id_note!)"
+                  title="Supprimer"
+                  *ngIf="shouldShowTheoreticalSection(group)"
+                >
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                    />
+                  </svg>
+                </button>
+                <span
+                  *ngIf="!shouldShowTheoreticalSection(group)"
+                  class="no-actions"
+                >
+                  Notes théoriques non disponibles
+                </span>
+              </div>
+            </td>
+          </tr>
+
+          <tr
+            *ngIf="
+              !shouldShowTheoreticalSection(group) &&
+              group.theoreticalNotes.length === 0
+            "
+            class="info-row"
+          >
+            <td colspan="8" class="info-message">
+              <div class="info-content">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+                <span
+                  >Formation {{ getTrainingTypeLabel(group.trainingType) }} -
+                  Notes pratiques uniquement</span
+                >
+              </div>
+            </td>
+          </tr>
+
+          <tr
+          *ngIf="showPracticalNoteForGroup(group)"
+          class="practical-note-row"
+        >
+          <td colspan="3" class="practical-note-header">
+            <div class="practical-note-title">
+              <strong
+                >Note Pratique ({{ group.practicalNote?.type_note || 'Stage' }})</strong
+              >
+              <span
+                class="training-type-badge"
+                [class]="'type-' + group.trainingType"
+              >
+                {{ getTrainingTypeLabel(group.trainingType) }}
+              </span>
+            </div>
+          </td>
+          <td
+            class="text-center practical-note-value"
+            [attr.colspan]="getPracticalNoteColspan(group)"
+          >
+            <!-- CORRECTION : Utiliser !. au lieu de ?. car nous savons que practicalNote existe -->
+            <span
+              class="note-badge large"
+              [class]="getNoteColor(group.practicalNote!.practical_note)"
+              *ngIf="group.practicalNote && group.practicalNote.practical_note !== null && group.practicalNote.practical_note !== undefined"
+            >
+              {{ group.practicalNote!.practical_note | number : "1.2-2" }}/20
+            </span>
+            <span
+              class="practical-note-mention"
+              [class]="getPracticalNoteMentionClass(group)"
+              *ngIf="group.practicalNote && group.practicalNote.practical_note !== null && group.practicalNote.practical_note !== undefined"
+            >
+              {{ getPracticalNoteMention(group) }}
+            </span>
+            <!-- Message si note est null/undefined -->
+            <span
+              class="note-badge large note-gray"
+              *ngIf="group.practicalNote && (group.practicalNote.practical_note === null || group.practicalNote.practical_note === undefined)"
+            >
+              Non évalué
+            </span>
+          </td>
+          <td colspan="2" class="practical-note-actions">
+            <div class="action-buttons">
+              <button
+                class="btn-action edit"
+                (click)="editPracticalNote(group)"
+                title="Modifier"
+                *ngIf="group.practicalNote"
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"
+                  />
+                </svg>
+              </button>
+              <button
+                class="btn-action delete"
+                (click)="deletePracticalNote(group)"
+                title="Supprimer"
+                *ngIf="group.practicalNote"
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                  />
+                </svg>
+              </button>
+            </div>
+          </td>
+        </tr>
+
+          <tr
+            *ngIf="groupIndex < groupedNotes.length - 1"
+            class="group-separator"
+          >
+            <td
+              colspan="9"
+              style="height: 20px; background-color: #f8f9fa"
+            ></td>
+          </tr>
+        </ng-container>
+      </tbody>
+    </table>
+
+    <!-- État vide -->
+    <div class="empty-state" *ngIf="groupedNotes.length === 0 && !isLoading">
+      <div class="empty-icon">
+        <svg width="80" height="80" viewBox="0 0 20 20" fill="currentColor">
+          <path
+            fill-rule="evenodd"
+            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293z"
+          />
+        </svg>
+      </div>
+      <h3>Aucune note trouvée</h3>
+      <p
+        *ngIf="
+          searchTerm ||
+          filterApprentice ||
+          filterTraining ||
+          filterSubject ||
+          selectedTrainingType !== 'all'
+        "
+      >
+        Aucun résultat ne correspond à vos critères de recherche.
+      </p>
+      <p
+        *ngIf="
+          !searchTerm &&
+          !filterApprentice &&
+          !filterTraining &&
+          !filterSubject &&
+          selectedTrainingType === 'all'
+        "
+      >
+        Commencez par ajouter votre première note.
+      </p>
+      <div class="empty-state-actions">
+        <button class="btn-primary" (click)="openPracticalNoteForm()">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+            <path
+              fill-rule="evenodd"
+              d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
+            />
+          </svg>
+          Ajouter une note pratique
+        </button>
+        <button class="btn-secondary" (click)="openMultipleNotesForm()">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+            <path
+              fill-rule="evenodd"
+              d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
+            />
+          </svg>
+          Saisie multiple de notes théoriques
+        </button>
+      </div>
+    </div>
+
+    <!-- État de chargement -->
+    <div class="loading-state" *ngIf="isLoading">
+      <div class="loading-spinner"></div>
+      <p>Chargement des notes...</p>
+    </div>
+  </div>
+
+<!-- Modal Formulaire Note Pratique - CORRIGÉ -->
+<div
+  class="modal-overlay"
+  *ngIf="showPracticalForm"
+  (click)="closePracticalNoteForm()"
+>
+  <div class="modal-container" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>{{ isEditing ? "Modifier" : "Ajouter" }} une Note Pratique</h2>
+      <button class="btn-close" (click)="closePracticalNoteForm()">
+        <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+          <path
+            fill-rule="evenodd"
+            d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+          />
+        </svg>
+      </button>
+    </div>
+
+    <form
+      [formGroup]="practicalNoteForm"
+      (ngSubmit)="onPracticalNoteSubmit()"
+      class="modal-body"
+    >
+      <div class="form-section">
+        <div class="section-header">
+          <h3>Note Pratique (Stage/Rapport)</h3>
+          <p class="section-subtitle">
+            Saisissez la note pratique pour un apprenti
+          </p>
+          <!-- Message d'information -->
+          <div
+            class="info-message"
+            *ngIf="
+              practicalNoteForm.get('training_type')?.value !==
+              'professionnel_dual'
+            "
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                clip-rule="evenodd"
+              />
+            </svg>
+            <span
+              >Seules les formations "Professionnel Dual" peuvent avoir des
+              notes pratiques</span
+            >
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="training_type" class="form-label">
+              Type de Formation <span class="required">*</span>
+            </label>
+            <select
+              id="training_type"
+              formControlName="training_type"
+              (change)="onTrainingTypeChange(practicalNoteForm)"
+              [class.error]="
+                isFieldInvalid(practicalNoteForm, 'training_type')
+              "
+              class="form-select"
+            >
+              <option value="">Sélectionner un type</option>
+              <option 
+                value="modulaire"
+                [selected]="practicalNoteForm.get('training_type')?.value === 'modulaire'"
+              >Modulaire</option>
+              <option 
+                value="thematique"
+                [selected]="practicalNoteForm.get('training_type')?.value === 'thematique'"
+              >Thématique</option>
+              <option 
+                value="professionnel_dual"
+                [selected]="practicalNoteForm.get('training_type')?.value === 'professionnel_dual'"
+              >Professionnel Dual</option>
+            </select>
+            <div
+              class="error-message"
+              *ngIf="isFieldInvalid(practicalNoteForm, 'training_type')"
+            >
+              {{ getFieldError(practicalNoteForm, "training_type") }}
+            </div>
+            <!-- Debug info -->
+            <div class="form-hint" *ngIf="practicalNoteForm.get('training_type')?.value">
+              Type sélectionné: <strong>{{ practicalNoteForm.get('training_type')?.value }}</strong>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="id_training" class="form-label">
+              Formation <span class="required">*</span>
+            </label>
+            <select
+              id="id_training"
+              formControlName="id_training"
+              (change)="onTrainingChange(practicalNoteForm)"
+              [class.error]="isFieldInvalid(practicalNoteForm, 'id_training')"
+              class="form-select"
+            >
+              <option value="">Sélectionner une formation</option>
+              <option
+                *ngFor="let training of filteredTrainings"
+                [value]="training.id_training"
+                [selected]="training.id_training === practicalNoteForm.get('id_training')?.value"
+              >
+                {{ getTrainingName(training) }} ({{
+                  getTrainingTypeLabel(training.type_formation)
+                }})
+              </option>
+            </select>
+            <div
+              class="error-message"
+              *ngIf="isFieldInvalid(practicalNoteForm, 'id_training')"
+            >
+              {{ getFieldError(practicalNoteForm, "id_training") }}
+            </div>
+            <!-- Debug info -->
+            <div class="form-hint" *ngIf="practicalNoteForm.get('id_training')?.value">
+              Formation sélectionnée: <strong>{{ getTrainingDisplayName(practicalNoteForm.get('id_training')?.value) }}</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="id_apprentice" class="form-label">
+              Apprenti <span class="required">*</span>
+            </label>
+            <select
+              id="id_apprentice"
+              formControlName="id_apprentice"
+              [class.error]="
+                isFieldInvalid(practicalNoteForm, 'id_apprentice')
+              "
+              class="form-select"
+              [disabled]="
+                getSelectedTrainingType() !== 'professionnel_dual' &&
+                !isEditing
+              "
+            >
+              <option value="">Sélectionner un apprenti</option>
+              <option
+                *ngFor="let apprentice of filteredApprentices"
+                [value]="apprentice.id_apprentice"
+                [selected]="apprentice.id_apprentice === practicalNoteForm.get('id_apprentice')?.value"
+              >
+                {{ getApprenticeName(apprentice) }} -
+                {{ getTrainingNameFromApprentice(apprentice) }}
+              </option>
+            </select>
+            <div
+              class="error-message"
+              *ngIf="isFieldInvalid(practicalNoteForm, 'id_apprentice')"
+            >
+              {{ getFieldError(practicalNoteForm, "id_apprentice") }}
+            </div>
+            <!-- Debug info -->
+            <div class="form-hint" *ngIf="practicalNoteForm.get('id_apprentice')?.value">
+              Apprenti sélectionné: <strong>{{ getApprenticeDisplayName(practicalNoteForm.get('id_apprentice')?.value) }}</strong>
+            </div>
+            <!-- Message si aucun apprenti trouvé -->
+            <div
+              class="form-hint warning"
+              *ngIf="
+                filteredApprentices.length === 0 &&
+                practicalNoteForm.get('id_training')?.value
+              "
+            >
+              ⚠️ Aucun apprenti trouvé pour cette formation
+            </div>
+            <div class="form-hint info" *ngIf="filteredApprentices.length > 0">
+              📋 {{ filteredApprentices.length }} apprenti(s) disponible(s)
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="type_note" class="form-label">
+              Type de note <span class="required">*</span>
+            </label>
+            <select
+              id="type_note"
+              formControlName="type_note"
+              [class.error]="isFieldInvalid(practicalNoteForm, 'type_note')"
+              class="form-select"
+              [disabled]="
+                getSelectedTrainingType() !== 'professionnel_dual' &&
+                !isEditing
+              "
+            >
+              <option 
+                value="Stage"
+                [selected]="practicalNoteForm.get('type_note')?.value === 'Stage'"
+              >Stage</option>
+              <option 
+                value="Rapport"
+                [selected]="practicalNoteForm.get('type_note')?.value === 'Rapport'"
+              >Rapport</option>
+            </select>
+            <div
+              class="error-message"
+              *ngIf="isFieldInvalid(practicalNoteForm, 'type_note')"
+            >
+              {{ getFieldError(practicalNoteForm, "type_note") }}
+            </div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group full-width">
+            <label for="practical_note" class="form-label">
+              Note Pratique <span class="required">*</span>
+            </label>
+            <input
+              id="practical_note"
+              type="number"
+              formControlName="practical_note"
+              step="0.01"
+              min="0"
+              max="20"
+              placeholder="0.00 - 20.00"
+              [class.error]="
+                isFieldInvalid(practicalNoteForm, 'practical_note')
+              "
+              class="form-input"
+              [disabled]="
+                getSelectedTrainingType() !== 'professionnel_dual' &&
+                !isEditing
+              "
+            />
+            <div
+              class="error-message"
+              *ngIf="isFieldInvalid(practicalNoteForm, 'practical_note')"
+            >
+              {{ getFieldError(practicalNoteForm, "practical_note") }}
+            </div>
+            <!-- Debug info -->
+            <div class="form-hint" *ngIf="practicalNoteForm.get('practical_note')?.value !== null">
+              Note saisie: <strong>{{ practicalNoteForm.get('practical_note')?.value }}/20</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button
+          type="button"
+          class="btn-secondary"
+          (click)="closePracticalNoteForm()"
+        >
+          Annuler
+        </button>
+        <button
+          type="submit"
+          class="btn-primary"
+          [disabled]="
+            isSubmitting ||
+            practicalNoteForm.invalid ||
+            (getSelectedTrainingType() !== 'professionnel_dual' && !isEditing)
+          "
+        >
+          <span *ngIf="!isSubmitting">{{
+            isEditing ? "Modifier" : "Enregistrer"
+          }}</span>
+          <span *ngIf="isSubmitting" class="loading-text">
+            <div class="button-spinner"></div>
+            Enregistrement...
+          </span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal de sélection pour la saisie multiple - CORRIGÉ -->
+<div class="modal-overlay" *ngIf="showMultipleNotesSelection">
+  <div class="modal-container" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Saisie Multiple - Sélection</h2>
+      <button class="btn-close" (click)="closeMultipleNotesSelection()">
+        <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+          <path
+            fill-rule="evenodd"
+            d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+          />
+        </svg>
+      </button>
+    </div>
+
+    <form
+      [formGroup]="multipleNotesForm"
+      (ngSubmit)="onMultipleNotesSubmit()"
+      class="modal-body"
+    >
+      <div class="form-section">
+        <div class="section-header">
+          <h3>Sélectionnez la formation et l'apprenti</h3>
+          <p class="section-subtitle">
+            Vous pourrez ensuite saisir les notes théoriques pour toutes les
+            matières de cette formation
+          </p>
+          <!-- Message d'avertissement pour Professionnel Dual -->
+          <div
+            class="section-warning"
+            *ngIf="
+              multipleNotesForm.get('training_type')?.value ===
+              'professionnel_dual'
+            "
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+              />
+            </svg>
+            <span>
+              Les formations "Professionnel Dual" peuvent avoir des notes
+              théoriques ET pratiques. Cette saisie concerne uniquement les
+              notes théoriques.
+            </span>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="multiple_training_type" class="form-label">
+              Type de Formation <span class="required">*</span>
+            </label>
+            <select
+              id="multiple_training_type"
+              formControlName="training_type"
+              (change)="onTrainingTypeChange(multipleNotesForm)"
+              [class.error]="
+                isFieldInvalid(multipleNotesForm, 'training_type')
+              "
+              class="form-select"
+            >
+              <option value="">Sélectionner un type</option>
+              <option 
+                value="modulaire"
+                [selected]="multipleNotesForm.get('training_type')?.value === 'modulaire'"
+              >Modulaire</option>
+              <option 
+                value="thematique"
+                [selected]="multipleNotesForm.get('training_type')?.value === 'thematique'"
+              >Thématique</option>
+              <option 
+                value="professionnel_dual"
+                [selected]="multipleNotesForm.get('training_type')?.value === 'professionnel_dual'"
+              >Professionnel Dual</option>
+            </select>
+            <div
+              class="error-message"
+              *ngIf="isFieldInvalid(multipleNotesForm, 'training_type')"
+            >
+              {{ getFieldError(multipleNotesForm, "training_type") }}
+            </div>
+            <!-- Debug info -->
+            <div class="form-hint" *ngIf="multipleNotesForm.get('training_type')?.value">
+              Type sélectionné: <strong>{{ multipleNotesForm.get('training_type')?.value }}</strong>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="multiple_id_training" class="form-label">
+              Formation <span class="required">*</span>
+            </label>
+            <select
+              id="multiple_id_training"
+              formControlName="id_training"
+              (change)="onTrainingChange(multipleNotesForm)"
+              [class.error]="isFieldInvalid(multipleNotesForm, 'id_training')"
+              class="form-select"
+            >
+              <option value="">Sélectionner une formation</option>
+              <option
+                *ngFor="let training of filteredTrainings"
+                [value]="training.id_training"
+                [selected]="training.id_training === multipleNotesForm.get('id_training')?.value"
+              >
+                {{ getTrainingName(training) }} ({{
+                  getTrainingTypeLabel(training.type_formation)
+                }})
+              </option>
+            </select>
+            <div
+              class="error-message"
+              *ngIf="isFieldInvalid(multipleNotesForm, 'id_training')"
+            >
+              {{ getFieldError(multipleNotesForm, "id_training") }}
+            </div>
+            <!-- Debug info -->
+            <div class="form-hint" *ngIf="multipleNotesForm.get('id_training')?.value">
+              Formation sélectionnée: <strong>{{ getTrainingDisplayName(multipleNotesForm.get('id_training')?.value) }}</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group full-width">
+            <label for="multiple_id_apprentice" class="form-label">
+              Apprenti <span class="required">*</span>
+            </label>
+            <select
+              id="multiple_id_apprentice"
+              formControlName="id_apprentice"
+              [class.error]="
+                isFieldInvalid(multipleNotesForm, 'id_apprentice')
+              "
+              class="form-select"
+            >
+              <option value="">Sélectionner un apprenti</option>
+              <option
+                *ngFor="let apprentice of filteredApprentices"
+                [value]="apprentice.id_apprentice"
+                [selected]="apprentice.id_apprentice === multipleNotesForm.get('id_apprentice')?.value"
+              >
+                {{ getApprenticeName(apprentice) }} -
+                {{
+                  getTrainingTypeLabel(
+                    apprentice.training_type || "modulaire"
+                  )
+                }}
+              </option>
+            </select>
+            <div
+              class="error-message"
+              *ngIf="isFieldInvalid(multipleNotesForm, 'id_apprentice')"
+            >
+              {{ getFieldError(multipleNotesForm, "id_apprentice") }}
+            </div>
+            <!-- Debug info -->
+            <div class="form-hint" *ngIf="multipleNotesForm.get('id_apprentice')?.value">
+              Apprenti sélectionné: <strong>{{ getApprenticeDisplayName(multipleNotesForm.get('id_apprentice')?.value) }}</strong>
+            </div>
+            <!-- Message si aucun apprenti trouvé -->
+            <div
+              class="form-hint warning"
+              *ngIf="
+                filteredApprentices.length === 0 &&
+                multipleNotesForm.get('id_training')?.value
+              "
+            >
+              ⚠️ Aucun apprenti trouvé pour cette formation
+            </div>
+            <div class="form-hint info" *ngIf="filteredApprentices.length > 0">
+              📋 {{ filteredApprentices.length }} apprenti(s) disponible(s)
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button
+          type="button"
+          class="btn-secondary"
+          (click)="closeMultipleNotesSelection()"
+        >
+          Annuler
+        </button>
+        <button
+          type="submit"
+          class="btn-primary"
+          [disabled]="isLoading || multipleNotesForm.invalid"
+        >
+          <span *ngIf="!isLoading">Continuer vers la saisie</span>
+          <span *ngIf="isLoading" class="loading-text">
+            <div class="button-spinner"></div>
+            Chargement...
+          </span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+  <!-- Modal Saisie Multiple des Notes Théoriques -->
+  <div
+    class="modal-overlay"
+    *ngIf="showMultipleNotesForm"
+    (click)="closeMultipleNotesForm()"
+  >
+    <div class="modal-container large" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Saisie Multiple des Notes Théoriques</h2>
+        <button class="btn-close" (click)="closeMultipleNotesForm()">
+          <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+            <path
+              fill-rule="evenodd"
+              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+            />
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="multiple-notes-header">
+          <div class="student-info">
+            <div class="avatar large">
+              {{ getApprenticeInitials(selectedApprentice!) }}
+            </div>
+            <div>
+              <h3>{{ getApprenticeFullName(selectedApprentice!) }}</h3>
+              <p class="formation-name">
+                {{ selectedTraining?.metier || "Formation inconnue" }}
+                <span
+                  class="training-type-badge"
+                  [class]="'type-' + selectedTraining?.type_formation"
+                >
+                  {{
+                    getTrainingTypeLabel(
+                      selectedTraining?.type_formation || "modulaire"
+                    )
+                  }}
+                </span>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Aperçu de la moyenne générale -->
+        <div
+          class="moyenne-generale-preview"
+          *ngIf="subjectsWithNotes.length > 0"
+        >
+          <div class="preview-card">
+            <div class="preview-header">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.414-1.414L11 9.586V6z"
+                />
+              </svg>
+              <span>Aperçu de la moyenne générale (notes théoriques)</span>
+            </div>
+            <div class="preview-content">
+              <div class="preview-row">
+                <span>Moyenne estimée:</span>
+                <span class="moyenne-estimee">
+                  {{ calculateEstimatedOverallAverage() | number : "1.2-2" }}/20
+                </span>
+              </div>
+              <div class="preview-row">
+                <span>Mention estimée:</span>
+                <span
+                  class="mention-estimee"
+                  [class]="
+                    getMentionClass(
+                      getMention(calculateEstimatedOverallAverage())
+                    )
+                  "
+                >
+                  {{ getMention(calculateEstimatedOverallAverage()) }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tableau des matières théoriques -->
+        <div class="table-container">
+          <div class="table-section-header">
+            <h3>Notes Théoriques par Matière</h3>
+            <p class="section-subtitle">
+              Saisissez les notes théoriques pour chaque matière
+            </p>
+          </div>
+
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Matière</th>
+                <th class="text-center">Coefficient</th>
+                <th class="text-center">Note Théorique</th>
+                <th class="text-center">Moyenne Matière</th>
+                <th class="text-center">Statut</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let subject of subjectsWithNotes; let i = index">
+                <td>
+                  <strong>{{ subject.subject_name }}</strong>
+                </td>
+                <td class="text-center">
+                  <span class="coefficient-badge">{{
+                    subject.coefficient
+                  }}</span>
+                </td>
+                <td class="text-center">
+                  <input
+                    type="number"
+                    [value]="subject.theoretical_note"
+                    (input)="updateSubjectNote(i, $event)"
+                    step="0.01"
+                    min="0"
+                    max="20"
+                    placeholder="0.00"
+                    class="note-input"
+                    [class.has-note]="subject.has_note"
+                  />
+                </td>
+                <td class="text-center">
+                  <span class="moyenne-preview">
+                    {{
+                      calculateSubjectAverage(subject.theoretical_note)
+                        | number : "1.2-2"
+                    }}/20
+                  </span>
+                </td>
+                <td class="text-center">
+                  <span
+                    class="status-badge"
+                    [class.has-notes]="subject.has_note"
+                  >
+                    {{ subject.has_note ? "Déjà noté" : "À saisir" }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn-secondary"
+            (click)="closeMultipleNotesForm()"
+          >
+            Annuler
+          </button>
+          <button
+            type="button"
+            class="btn-primary"
+            (click)="saveMultipleNotes()"
+            [disabled]="isLoading || !canSaveMultipleNotes()"
+          >
+            <span *ngIf="!isLoading"
+              >Enregistrer toutes les notes théoriques</span
+            >
+            <span *ngIf="isLoading" class="loading-text">
+              <div class="button-spinner"></div>
+              Enregistrement...
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Modal de modification de note théorique -->
+  <div
+    class="modal-overlay"
+    *ngIf="showTheoreticalEditForm"
+    (click)="closeTheoreticalEditForm()"
+  >
+    <div class="modal-container" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Modifier la Note Théorique</h2>
+        <button class="btn-close" (click)="closeTheoreticalEditForm()">
+          <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+            <path
+              fill-rule="evenodd"
+              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+            />
+          </svg>
+        </button>
+      </div>
+
+      <form
+        [formGroup]="theoreticalNoteEditForm"
+        (ngSubmit)="onTheoreticalNoteEditSubmit()"
+        class="modal-body"
+      >
+        <div class="form-section">
+          <div class="section-header">
+            <h3>Modification de note</h3>
+            <p class="section-subtitle">
+              Modifiez la note théorique pour cette matière
+            </p>
+          </div>
+
+          <!-- Informations de l'apprenti et de la matière -->
+          <div class="info-card" *ngIf="selectedNoteForEdit">
+            <div class="info-row">
+              <div class="info-label">Apprenti:</div>
+              <div class="info-value">
+                <strong>{{
+                  getNoteApprenticeName(selectedNoteForEdit)
+                }}</strong>
+              </div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Formation:</div>
+              <div class="info-value">
+                {{
+                  selectedNoteForEdit.training_metier || "Formation inconnue"
+                }}
+              </div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Matière:</div>
+              <div class="info-value">
+                <strong>{{ getNoteSubjectName(selectedNoteForEdit) }}</strong>
+              </div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Coefficient:</div>
+              <div class="info-value">
+                {{ selectedNoteForEdit.coefficient || 1 }}
+              </div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Note actuelle:</div>
+              <div class="info-value">
+                <span
+                  class="note-badge"
+                  [class]="getNoteColor(selectedNoteForEdit.theoretical_note)"
+                >
+                  {{
+                    selectedNoteForEdit.theoretical_note !== null &&
+                    selectedNoteForEdit.theoretical_note !== undefined
+                      ? (selectedNoteForEdit.theoretical_note
+                          | number : "1.2-2") + "/20"
+                      : "N/A"
+                  }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Champ de saisie de la note -->
+          <div class="form-row">
+            <div class="form-group full-width">
+              <label for="edit_theoretical_note" class="form-label">
+                Nouvelle note théorique <span class="required">*</span>
+              </label>
+              <input
+                id="edit_theoretical_note"
+                type="number"
+                formControlName="theoretical_note"
+                step="0.01"
+                min="0"
+                max="20"
+                placeholder="0.00 - 20.00"
+                [class.error]="
+                  isFieldInvalid(theoreticalNoteEditForm, 'theoretical_note')
+                "
+                class="form-input"
+              />
+              <div
+                class="error-message"
+                *ngIf="
+                  isFieldInvalid(theoreticalNoteEditForm, 'theoretical_note')
+                "
+              >
+                {{ getFieldError(theoreticalNoteEditForm, "theoretical_note") }}
+              </div>
+              <div class="form-hint">
+                La note doit être comprise entre 0.00 et 20.00
+              </div>
+            </div>
+          </div>
+
+          <!-- Aperçu de la nouvelle mention -->
+          <div
+            class="preview-card"
+            *ngIf="theoreticalNoteEditForm.get('theoretical_note')?.value"
+          >
+            <div class="preview-header">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.414-1.414L11 9.586V6z"
+                />
+              </svg>
+              <span>Aperçu de la nouvelle mention</span>
+            </div>
+            <div class="preview-content">
+              <div class="preview-row">
+                <span>Nouvelle note:</span>
+                <span class="note-preview">
+                  {{
+                    theoreticalNoteEditForm.get("theoretical_note")?.value
+                      | number : "1.2-2"
+                  }}/20
+                </span>
+              </div>
+              <div class="preview-row">
+                <span>Nouvelle mention:</span>
+                <span
+                  class="mention-preview"
+                  [class]="
+                    getMentionClass(
+                      getMention(
+                        theoreticalNoteEditForm.get('theoretical_note')?.value
+                      )
+                    )
+                  "
+                >
+                  {{
+                    getMention(
+                      theoreticalNoteEditForm.get("theoretical_note")?.value
+                    )
+                  }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn-secondary"
+            (click)="closeTheoreticalEditForm()"
+          >
+            Annuler
+          </button>
+          <button
+            type="submit"
+            class="btn-primary"
+            [disabled]="isSubmitting || theoreticalNoteEditForm.invalid"
+          >
+            <span *ngIf="!isSubmitting">Modifier la note</span>
+            <span *ngIf="isSubmitting" class="loading-text">
+              <div class="button-spinner"></div>
+              Modification...
+            </span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Dialogs de confirmation et messages -->
+  <div class="modal-overlay" *ngIf="showDeleteConfirm">
+    <div class="modal-container confirmation-modal">
+      <div class="modal-header">
+        <h2>Confirmer la suppression</h2>
+        <button class="btn-close" (click)="cancelDelete()">×</button>
+      </div>
+      <div class="modal-body">
+        <p>{{ dialogMessage }}</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" (click)="cancelDelete()">
+          Annuler
+        </button>
+        <button type="button" class="btn-danger" (click)="confirmDelete()">
+          Supprimer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" *ngIf="showSuccessDialog">
+    <div class="modal-container success-modal">
+      <div class="modal-body">
+        <div class="success-icon">
+          <svg width="48" height="48" viewBox="0 0 20 20" fill="currentColor">
+            <path
+              fill-rule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+            />
+          </svg>
+        </div>
+        <p>{{ dialogMessage }}</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-primary" (click)="closeDialog()">
+          OK
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" *ngIf="showErrorDialog">
+    <div class="modal-container error-modal">
+      <div class="modal-body">
+        <div class="error-icon">
+          <svg width="48" height="48" viewBox="0 0 20 20" fill="currentColor">
+            <path
+              fill-rule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293z"
+            />
+          </svg>
+        </div>
+        <p>{{ dialogMessage }}</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-primary" (click)="closeDialog()">
+          OK
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

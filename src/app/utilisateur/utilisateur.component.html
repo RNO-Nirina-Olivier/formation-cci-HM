@@ -1,0 +1,403 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1>Gestion des Utilisateurs</h1>
+      <p class="subtitle">{{ utilisateurs.length }} utilisateurs enregistrés</p>
+    </div>
+    <button class="btn-primary" (click)="openForm()">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+        <path
+          fill-rule="evenodd"
+          d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
+        />
+      </svg>
+      Nouvel Utilisateur
+    </button>
+  </div>
+  <!-- Tableau des utilisateurs -->
+  <div class="table-container">
+    <table class="data-table" *ngIf="filteredUtilisateurs.length > 0">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nom d'utilisateur</th>
+          <th>Email</th>
+          <th>Téléphone</th>
+          <th>Date de création</th>
+          <th class="actions-header">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let utilisateur of filteredUtilisateurs">
+          <td class="id-cell">
+            <span class="id-badge">{{ utilisateur.id_user }}</span>
+          </td>
+          <td>
+            <div class="user-info">
+              <div class="user-avatar">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+              </div>
+              <div class="user-details">
+                <strong>{{ utilisateur.username }}</strong>
+              </div>
+            </div>
+          </td>
+          <td>{{ utilisateur.email }}</td>
+          <td>{{ getTelephoneFormate(utilisateur.telephone) }}</td>
+          <td>{{ utilisateur.date_creation | date : "dd/MM/yyyy" }}</td>
+          <td class="actions-cell">
+            <div class="actions-group">
+              <button
+                class="btn-icon small"
+                (click)="openForm(utilisateur)"
+                title="Modifier"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"
+                  />
+                </svg>
+              </button>
+              <button
+                class="btn-icon small danger"
+                (click)="confirmDelete(utilisateur)"
+                title="Supprimer"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                  />
+                </svg>
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- État vide -->
+    <div
+      class="empty-state"
+      *ngIf="filteredUtilisateurs.length === 0 && !isLoading"
+    >
+      <div class="empty-icon">
+        <svg width="64" height="64" viewBox="0 0 20 20" fill="currentColor">
+          <path
+            fill-rule="evenodd"
+            d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+            clip-rule="evenodd"
+          />
+        </svg>
+      </div>
+      <h3>Aucun utilisateur trouvé</h3>
+    </div>
+
+    <!-- Loading state -->
+    <div class="loading-state" *ngIf="isLoading">
+      <div class="loading-spinner"></div>
+      <p>Chargement des utilisateurs...</p>
+    </div>
+  </div>
+
+  <!-- Modal Formulaire Utilisateur -->
+  <div class="modal-overlay" *ngIf="showForm" (click)="closeForm()">
+    <div class="modal-container" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>
+          {{ isEditing ? "Modifier l'utilisateur" : "Ajouter un utilisateur" }}
+        </h2>
+        <button class="btn-close" (click)="closeForm()">
+          <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+            <path
+              fill-rule="evenodd"
+              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+            />
+          </svg>
+        </button>
+      </div>
+
+      <form
+        [formGroup]="utilisateurForm"
+        (ngSubmit)="onSubmit()"
+        class="modal-body"
+      >
+        <div class="form-row">
+          <div class="form-group">
+            <label for="username"
+              >Nom d'utilisateur <span class="required">*</span></label
+            >
+            <input
+              id="username"
+              type="text"
+              formControlName="username"
+              placeholder="Ex: john.doe"
+              [class.error]="
+                utilisateurForm.get('username')?.invalid &&
+                utilisateurForm.get('username')?.touched
+              "
+            />
+            <span
+              class="error-message"
+              *ngIf="
+                utilisateurForm.get('username')?.invalid &&
+                utilisateurForm.get('username')?.touched
+              "
+            >
+              {{ getFieldError("username") }}
+            </span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="email">Email <span class="required">*</span></label>
+          <input
+            id="email"
+            type="email"
+            formControlName="email"
+            placeholder="Ex: john@example.com"
+            [class.error]="
+              utilisateurForm.get('email')?.invalid &&
+              utilisateurForm.get('email')?.touched
+            "
+          />
+          <span
+            class="error-message"
+            *ngIf="
+              utilisateurForm.get('email')?.invalid &&
+              utilisateurForm.get('email')?.touched
+            "
+          >
+            {{ getFieldError("email") }}
+          </span>
+        </div>
+
+        <div class="form-group">
+          <label for="mot_de_passe"
+            >Mot de passe
+            <span class="required" *ngIf="!isEditing">*</span>
+            <span class="optional" *ngIf="isEditing"
+              >(laisser vide pour ne pas modifier)</span
+            >
+          </label>
+          <input
+            id="mot_de_passe"
+            type="password"
+            formControlName="mot_de_passe"
+            [placeholder]="
+              isEditing
+                ? 'Laisser vide pour ne pas modifier'
+                : 'Minimum 6 caractères'
+            "
+            [class.error]="
+              utilisateurForm.get('mot_de_passe')?.invalid &&
+              utilisateurForm.get('mot_de_passe')?.touched
+            "
+          />
+          <span
+            class="error-message"
+            *ngIf="
+              utilisateurForm.get('mot_de_passe')?.invalid &&
+              utilisateurForm.get('mot_de_passe')?.touched
+            "
+          >
+            {{ getFieldError("mot_de_passe") }}
+          </span>
+        </div>
+
+        <div class="form-group">
+          <label for="telephone">Téléphone</label>
+          <input
+            id="telephone"
+            type="tel"
+            formControlName="telephone"
+            placeholder="Ex: +261 34 12 345 67"
+            [class.error]="
+              utilisateurForm.get('telephone')?.invalid &&
+              utilisateurForm.get('telephone')?.touched
+            "
+            (input)="formatPhoneNumber($event)"
+            (focus)="onPhoneFocus()"
+            (blur)="onPhoneBlur()"
+          />
+          <span
+            class="error-message"
+            *ngIf="
+              utilisateurForm.get('telephone')?.invalid &&
+              utilisateurForm.get('telephone')?.touched
+            "
+          >
+            {{ getFieldError("telephone") }}
+          </span>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" (click)="closeForm()">
+            Annuler
+          </button>
+          <button
+            type="submit"
+            class="btn-primary"
+            [disabled]="isLoading || utilisateurForm.invalid"
+          >
+            <span *ngIf="!isLoading">{{
+              isEditing ? "Modifier l'utilisateur" : "Créer l'utilisateur"
+            }}</span>
+            <span *ngIf="isLoading">
+              {{ isEditing ? "Modification..." : "Création..." }}
+            </span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal de confirmation de suppression -->
+  <div class="modal-overlay" *ngIf="showDeleteConfirm" (click)="cancelDelete()">
+    <div
+      class="modal-container confirm-modal"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="modal-header">
+        <h2>Confirmer la suppression</h2>
+        <button class="btn-close" (click)="cancelDelete()">
+          <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+            <path
+              fill-rule="evenodd"
+              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+            />
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="confirm-icon">
+          <svg width="64" height="64" viewBox="0 0 20 20" fill="currentColor">
+            <path
+              fill-rule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293z"
+            />
+          </svg>
+        </div>
+
+        <h3>Êtes-vous sûr de vouloir supprimer cet utilisateur ?</h3>
+
+        <div class="confirm-details" *ngIf="userToDelete">
+          <div class="detail-item">
+            <strong>Nom d'utilisateur :</strong>
+            <span>{{ userToDelete.username }}</span>
+          </div>
+          <div class="detail-item">
+            <strong>Email :</strong>
+            <span>{{ userToDelete.email }}</span>
+          </div>
+          <div class="detail-item">
+            <strong>ID :</strong>
+            <span class="id-highlight">{{ userToDelete.id_user }}</span>
+          </div>
+        </div>
+
+        <div class="alert alert-warning">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+            <path
+              fill-rule="evenodd"
+              d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+            />
+          </svg>
+          <div>
+            <strong>Attention : Cette action est irréversible</strong>
+            <p>
+              Toutes les données associées à cet utilisateur seront
+              définitivement supprimées.
+            </p>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" (click)="cancelDelete()">
+            Annuler
+          </button>
+          <button
+            type="button"
+            class="btn-danger"
+            (click)="deleteUtilisateur()"
+            [disabled]="isLoading"
+          >
+            <span *ngIf="!isLoading">Supprimer définitivement</span>
+            <span *ngIf="isLoading">Suppression en cours...</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Boîte de dialogue de succès -->
+  <div
+    class="dialog-overlay"
+    *ngIf="showSuccessDialog"
+    (click)="closeSuccessDialog()"
+  >
+    <div class="success-dialog" (click)="$event.stopPropagation()">
+      <div class="dialog-icon success">
+        <svg width="48" height="48" viewBox="0 0 20 20" fill="currentColor">
+          <path
+            fill-rule="evenodd"
+            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+          />
+        </svg>
+      </div>
+      <div class="dialog-content">
+        <h3>Succès</h3>
+        <p>{{ successMessage }}</p>
+      </div>
+      <div class="dialog-actions">
+        <button class="btn-primary" (click)="closeSuccessDialog()">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Boîte de dialogue d'erreur -->
+  <div
+    class="dialog-overlay"
+    *ngIf="showErrorDialog"
+    (click)="closeErrorDialog()"
+  >
+    <div class="error-dialog" (click)="$event.stopPropagation()">
+      <div class="dialog-icon error">
+        <svg width="48" height="48" viewBox="0 0 20 20" fill="currentColor">
+          <path
+            fill-rule="evenodd"
+            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293z"
+          />
+        </svg>
+      </div>
+      <div class="dialog-content">
+        <h3>Erreur</h3>
+        <p>{{ errorMessage }}</p>
+      </div>
+      <div class="dialog-actions">
+        <button class="btn-primary" (click)="closeErrorDialog()">OK</button>
+      </div>
+    </div>
+  </div>
+</div>

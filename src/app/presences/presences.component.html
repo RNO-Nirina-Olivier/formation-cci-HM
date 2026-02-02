@@ -1,0 +1,826 @@
+<div class="page-container">
+  <!-- En-tête de page -->
+  <div class="page-header">
+    <div>
+      <h1>Gestion des Présences</h1>
+      <p class="subtitle">
+        {{ filteredPresences.length }} enregistrement(s) de présence
+      </p>
+    </div>
+    <div class="header-actions">
+      <!-- Bouton Saisie Multiple -->
+      <button
+        class="btn-primary"
+        (click)="openMultiStepForm()"
+        [disabled]="isLoading"
+      >
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+          <path
+            fill-rule="evenodd"
+            d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
+          />
+        </svg>
+        Saisie Multiple
+      </button>
+    </div>
+  </div>
+
+  <!-- Filtres -->
+  <div class="filters-bar">
+    <div class="filters-row">
+      <div class="search-box">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+          <path
+            fill-rule="evenodd"
+            d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+          />
+        </svg>
+        <input
+          type="text"
+          placeholder="Rechercher par apprenti, matière ou formation..."
+          [(ngModel)]="searchTerm"
+          (input)="applyFilters()"
+        />
+      </div>
+      <select
+        [(ngModel)]="filterFormation"
+        (change)="applyFilters()"
+        class="filter-select"
+      >
+        <option value="">Toutes les formations</option>
+        <option *ngFor="let formation of formations" [value]="formation.id_formation">
+          {{ formation.nom_formation }}
+        </option>
+      </select>
+      <select
+        [(ngModel)]="filterStatut"
+        (change)="applyFilters()"
+        class="filter-select"
+      >
+        <option value="">Tous les statuts</option>
+        <option *ngFor="let statut of statuts" [value]="statut">
+          {{ statut }}
+        </option>
+      </select>
+      <input
+        type="date"
+        [(ngModel)]="filterDate"
+        (change)="applyFilters()"
+        class="filter-select"
+        placeholder="Filtrer par date"
+      />
+      <select
+        [(ngModel)]="filterMatiere"
+        (change)="applyFilters()"
+        class="filter-select"
+      >
+        <option value="">Toutes les matières</option>
+        <option *ngFor="let matiere of matieres" [value]="matiere">
+          {{ matiere }}
+        </option>
+      </select>
+      <button class="btn-clear" (click)="clearFilters()">
+        × Réinitialiser
+      </button>
+    </div>
+  </div>
+
+  <!-- Tableau des Présences -->
+  <div class="table-container">
+    <table class="data-table" *ngIf="filteredPresences.length > 0">
+      <thead>
+        <tr>
+          <th>Apprenti</th>
+          <th>Formation</th>
+          <th>Date</th>
+          <th>Heure</th>
+          <th>Matière</th>
+          <th>Statut</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let presence of filteredPresences">
+          <td>
+            <div class="user-cell">
+              <div class="avatar">{{ safeGetApprentiInitials(presence) }}</div>
+              <div class="user-details">
+                <strong>{{ safeGetApprentiName(presence) }}</strong>
+                <small>{{ presence.id_apprenti }}</small>
+                <div *ngIf="presence.num_inscription || presence.num_reinscription" class="apprenti-numbers">
+                  <span *ngIf="presence.num_inscription" class="number-badge">Insc: {{ presence.num_inscription }}</span>
+                  <span *ngIf="presence.num_reinscription" class="number-badge">Reins: {{ presence.num_reinscription }}</span>
+                </div>
+              </div>
+            </div>
+          </td>
+          <td>
+            <span class="formation-badge">{{ safeGetFormationName(presence.id_formation) }}</span>
+          </td>
+          <td>
+            <strong>{{ safeFormatDate(presence.date_cours) }}</strong>
+          </td>
+          <td>
+            {{ safeFormatTime(presence.heure_debut) }} - {{ safeFormatTime(presence.heure_fin) }}
+          </td>
+          <td>{{ presence.matiere }}</td>
+          <td>
+            <span
+              class="status-badge"
+              [class]="getStatutClass(presence.statut)"
+            >
+              {{ presence.statut }}
+            </span>
+          </td>
+          <td>
+            <div class="action-buttons">
+              <button
+                class="btn-icon"
+                (click)="openForm(presence)"
+                title="Modifier"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"
+                  />
+                </svg>
+              </button>
+              <button
+                class="btn-icon danger"
+                (click)="deletePresence(presence.id_presence!)"
+                title="Supprimer"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                  />
+                </svg>
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- État vide -->
+    <div
+      class="empty-state"
+      *ngIf="filteredPresences.length === 0 && !isLoading"
+    >
+      <div class="empty-icon">
+        <svg width="80" height="80" viewBox="0 0 20 20" fill="currentColor">
+          <path
+            fill-rule="evenodd"
+            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293z"
+          />
+        </svg>
+      </div>
+      <h3>Aucune présence enregistrée</h3>
+      <p *ngIf="searchTerm || filterStatut || filterDate || filterMatiere || filterFormation">
+        Aucun résultat ne correspond à vos critères de recherche.
+      </p>
+      <p
+        *ngIf="!searchTerm && !filterStatut && !filterDate && !filterMatiere && !filterFormation"
+      >
+        Commencez par enregistrer une nouvelle présence.
+      </p>
+      <div class="empty-state-actions">
+        <button class="btn-primary" (click)="openMultiStepForm()">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+            <path
+              fill-rule="evenodd"
+              d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
+            />
+          </svg>
+          Saisie Multiple
+        </button>
+      </div>
+    </div>
+
+    <!-- État de chargement -->
+    <div class="loading-state" *ngIf="isLoading">
+      <div class="loading-spinner"></div>
+      <p>Chargement des présences...</p>
+    </div>
+  </div>
+
+  <!-- Modal Formulaire Simple -->
+  <div class="modal-overlay" *ngIf="showForm" (click)="closeForm()">
+    <div class="modal-container" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>{{ isEditing ? "Modifier" : "Créer" }} une Présence</h2>
+        <button class="btn-close" (click)="closeForm()">
+          <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+            <path
+              fill-rule="evenodd"
+              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+            />
+          </svg>
+        </button>
+      </div>
+
+      <form
+        [formGroup]="presenceForm"
+        (ngSubmit)="onSubmit()"
+        class="modal-body"
+      >
+        <div class="form-group">
+          <label for="id_formation">Formation <span class="required">*</span></label>
+          <select id="id_formation" formControlName="id_formation">
+            <option value="">Sélectionner une formation</option>
+            <option
+              *ngFor="let formation of formations"
+              [value]="formation.id_formation"
+            >
+              {{ formation.nom_formation }} ({{ formation.type_formation }})
+            </option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="id_apprenti">Apprenti <span class="required">*</span></label>
+          <select id="id_apprenti" formControlName="id_apprenti">
+            <option value="">Sélectionner un apprenti</option>
+            <option
+              *ngFor="let apprenti of apprentis"
+              [value]="apprenti.id_apprenti"
+            >
+              {{ getApprentiDisplayName(apprenti) }}
+            </option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="date_cours">Date <span class="required">*</span></label>
+            <input id="date_cours" type="date" formControlName="date_cours">
+          </div>
+          <div class="form-group">
+            <label for="matiere">Matière <span class="required">*</span></label>
+            <select id="matiere" formControlName="matiere">
+              <option value="">Sélectionner une matière</option>
+              <option *ngFor="let matiere of matieres" [value]="matiere">
+                {{ matiere }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="heure_debut">Heure début <span class="required">*</span></label>
+            <input id="heure_debut" type="time" formControlName="heure_debut">
+          </div>
+          <div class="form-group">
+            <label for="heure_fin">Heure fin <span class="required">*</span></label>
+            <input id="heure_fin" type="time" formControlName="heure_fin">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="statut">Statut <span class="required">*</span></label>
+          <select id="statut" formControlName="statut">
+            <option *ngFor="let statut of statuts" [value]="statut">
+              {{ statut }}
+            </option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="remarque">Remarque</label>
+          <textarea
+            id="remarque"
+            formControlName="remarque"
+            placeholder="Remarque optionnelle..."
+            rows="3"
+          ></textarea>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" (click)="closeForm()">
+            Annuler
+          </button>
+          <button type="submit" class="btn-primary" [disabled]="isLoading">
+            {{ isEditing ? "Modifier" : "Créer" }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Formulaire en plusieurs étapes -->
+  <div
+    class="modal-overlay"
+    *ngIf="showMultiStepForm"
+    (click)="closeMultiStepForm()"
+  >
+    <div class="modal-container large" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Saisie Multiple des Présences</h2>
+        <button class="btn-close" (click)="closeMultiStepForm()">
+          <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+            <path
+              fill-rule="evenodd"
+              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+            />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Barre de progression -->
+      <div class="progress-bar">
+        <div class="progress-track">
+          <div
+            class="progress-fill"
+            [style.width.%]="getProgressPercentage()"
+          ></div>
+        </div>
+        <div class="progress-steps">
+          <div
+            class="progress-step"
+            [class.active]="currentStep === 1"
+            [class.completed]="currentStep > 1"
+          >
+            <span class="step-number">1</span>
+            <span class="step-label">Sélection du Cours</span>
+          </div>
+          <div
+            class="progress-step"
+            [class.active]="currentStep === 2"
+            [class.completed]="currentStep > 2"
+          >
+            <span class="step-number">2</span>
+            <span class="step-label">Saisie des Présences</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Étape 1: Sélection Formation/Date/Matière -->
+      <form
+        *ngIf="currentStep === 1"
+        [formGroup]="step1Form"
+        (ngSubmit)="onStep1Submit()"
+        class="modal-body"
+      >
+        <div class="form-section">
+          <h3>Sélectionnez les détails du cours</h3>
+          <p class="form-description">
+            Choisissez la formation, la date, les heures et la matière pour laquelle vous souhaitez enregistrer les présences.
+          </p>
+
+          <div class="form-group">
+            <label for="step1_id_formation">Formation <span class="required">*</span></label>
+            <select 
+              id="step1_id_formation" 
+              formControlName="id_formation"
+              [class.error]="isFieldInvalid(step1Form, 'id_formation')"
+              (change)="onFormationChange()"
+            >
+              <option value="">Sélectionner une formation</option>
+              <option *ngFor="let formation of formations" [value]="formation.id_formation">
+                {{ formation.nom_formation }} ({{ formation.type_formation }}) - {{ formation.nombre_apprentis }} apprentis
+              </option>
+            </select>
+            <div *ngIf="isFieldInvalid(step1Form, 'id_formation')" class="error-message">
+              {{ getFieldError(step1Form, "id_formation") }}
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="step1_date_cours">Date <span class="required">*</span></label>
+              <input 
+                id="step1_date_cours" 
+                type="date" 
+                formControlName="date_cours"
+                [class.error]="isFieldInvalid(step1Form, 'date_cours')"
+              >
+              <div *ngIf="isFieldInvalid(step1Form, 'date_cours')" class="error-message">
+                {{ getFieldError(step1Form, "date_cours") }}
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="step1_matiere">Matière <span class="required">*</span></label>
+              <select 
+                id="step1_matiere" 
+                formControlName="matiere"
+                [class.error]="isFieldInvalid(step1Form, 'matiere')"
+              >
+                <option value="">Sélectionner une matière</option>
+                <option *ngFor="let matiere of matieres" [value]="matiere">
+                  {{ matiere }}
+                </option>
+              </select>
+              <div *ngIf="isFieldInvalid(step1Form, 'matiere')" class="error-message">
+                {{ getFieldError(step1Form, "matiere") }}
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="step1_heure_debut">Heure début <span class="required">*</span></label>
+              <input 
+                id="step1_heure_debut" 
+                type="time" 
+                formControlName="heure_debut"
+                [class.error]="isFieldInvalid(step1Form, 'heure_debut')"
+              >
+              <div *ngIf="isFieldInvalid(step1Form, 'heure_debut')" class="error-message">
+                {{ getFieldError(step1Form, "heure_debut") }}
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="step1_heure_fin">Heure fin <span class="required">*</span></label>
+              <input 
+                id="step1_heure_fin" 
+                type="time" 
+                formControlName="heure_fin"
+                [class.error]="isFieldInvalid(step1Form, 'heure_fin')"
+              >
+              <div *ngIf="isFieldInvalid(step1Form, 'heure_fin')" class="error-message">
+                {{ getFieldError(step1Form, "heure_fin") }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn-secondary"
+            (click)="closeMultiStepForm()"
+          >
+            Annuler
+          </button>
+          <button
+            type="submit"
+            class="btn-primary"
+            [disabled]="isLoading || !step1Form.valid"
+          >
+            <span *ngIf="!isLoading">
+              Continuer vers la saisie
+            </span>
+            <span *ngIf="isLoading">
+              <div class="spinner-small"></div>
+              Chargement...
+            </span>
+          </button>
+        </div>
+      </form>
+
+<!-- Étape 2: Saisie des présences -->
+<div *ngIf="currentStep === 2" class="modal-body">
+  <div class="step-header">
+    <h3>Saisie des présences</h3>
+    <div class="step-info">
+      <div class="info-item">
+        <strong>Formation :</strong> {{ safeGetFormationName(selectedFormation) }}
+      </div>
+      <div class="info-item">
+        <strong>Date :</strong> {{ safeFormatDate(selectedDate) }}
+      </div>
+      <div class="info-item">
+        <strong>Heure :</strong> {{ safeFormatTime(selectedHeureDebut) }} - {{ safeFormatTime(selectedHeureFin) }}
+      </div>
+      <div class="info-item">
+        <strong>Matière :</strong> {{ selectedMatiere }}
+      </div>
+      <div class="info-item">
+        <strong>Apprentis :</strong> {{ getTotalApprentis() }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Statistiques en temps réel -->
+  <div class="stats-overview">
+    <div class="stat-item total">
+      <span class="stat-number">{{ getTotalApprentis() }}</span>
+      <span class="stat-label">Total</span>
+    </div>
+    <div class="stat-item present">
+      <span class="stat-number">{{ getPresentsCount() }}</span>
+      <span class="stat-label">Présents</span>
+    </div>
+    <div class="stat-item absent">
+      <span class="stat-number">{{ getAbsentsCount() }}</span>
+      <span class="stat-label">Absents</span>
+    </div>
+    <div class="stat-item retard">
+      <span class="stat-number">{{ getRetardsCount() }}</span>
+      <span class="stat-label">Retards</span>
+    </div>
+    <div class="stat-item excuse">
+      <span class="stat-number">{{ getExcusesCount() }}</span>
+      <span class="stat-label">Excusés</span>
+    </div>
+  </div>
+
+  <!-- Message si aucun apprenti -->
+  <div *ngIf="presencesArray.length === 0" class="empty-state">
+    <div class="empty-icon">👥</div>
+    <h3>Aucun apprenti trouvé</h3>
+    <p>Aucun apprenti n'est inscrit à cette formation ou les données ne sont pas disponibles.</p>
+  </div>
+
+  <!-- Formulaire de saisie multiple -->
+  <form
+    *ngIf="presencesArray.length > 0"
+    [formGroup]="step2Form"
+    (ngSubmit)="onMultiStepSubmit()"
+    class="presence-form"
+  >
+    <div class="table-container presence-table-container">
+      <table class="data-table presence-table">
+        <thead>
+          <tr>
+            <th width="35%">Apprenti</th>
+            <th width="30%">Statut</th>
+            <th width="35%">Remarque</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            *ngFor="
+              let presence of presencesArray.controls;
+              let i = index
+            "
+            [formGroupName]="i"
+            [class]="
+              'presence-row status-' +
+              (presence.get('statut')?.value || 'présent')
+            "
+          >
+            <td class="apprenti-cell">
+              <div class="user-cell">
+                <div
+                  class="avatar"
+                  [class]="
+                    'avatar-' +
+                    (presence.get('statut')?.value || 'présent')
+                  "
+                >
+                  {{
+                    getInitialsFromName(
+                      (presence.get("apprenti_prenom")?.value || "") +
+                        " " +
+                        (presence.get("apprenti_nom")?.value || "")
+                    )
+                  }}
+                </div>
+                <div class="user-details">
+                  <strong
+                    >{{ presence.get("apprenti_prenom")?.value }}
+                    {{ presence.get("apprenti_nom")?.value }}</strong
+                  >
+                  <small>{{ presence.get("id_apprenti")?.value }}</small>
+                  
+                  <!-- CORRECTION ICI : Utiliser les données directes du formulaire -->
+                  <div class="apprenti-numbers" *ngIf="presence.get('num_inscription')?.value || presence.get('num_reinscription')?.value">
+                    <span *ngIf="presence.get('num_inscription')?.value" 
+                          class="number-badge">
+                      Insc: {{ presence.get('num_inscription')?.value }}
+                    </span>
+                    <span *ngIf="presence.get('num_reinscription')?.value" 
+                          class="number-badge">
+                      Reins: {{ presence.get('num_reinscription')?.value }}
+                    </span>
+                  </div>
+
+                  <div
+                    *ngIf="presence.get('existing_presence')?.value"
+                    class="existing-badge"
+                  >
+                    📝 Déjà enregistré
+                  </div>
+                </div>
+              </div>
+            </td>
+            <td class="statut-cell">
+              <div class="statut-buttons">
+                <button
+                  type="button"
+                  class="statut-btn present"
+                  [class.active]="
+                    presence.get('statut')?.value === 'présent'
+                  "
+                  (click)="onStatutChange(i, 'présent')"
+                >
+                  <span class="statut-icon">✅</span>
+                  <span class="statut-text">Présent</span>
+                </button>
+
+                <button
+                  type="button"
+                  class="statut-btn absent"
+                  [class.active]="
+                    presence.get('statut')?.value === 'absent'
+                  "
+                  (click)="onStatutChange(i, 'absent')"
+                >
+                  <span class="statut-icon">❌</span>
+                  <span class="statut-text">Absent</span>
+                </button>
+
+                <button
+                  type="button"
+                  class="statut-btn retard"
+                  [class.active]="
+                    presence.get('statut')?.value === 'retard'
+                  "
+                  (click)="onStatutChange(i, 'retard')"
+                >
+                  <span class="statut-icon">⏰</span>
+                  <span class="statut-text">Retard</span>
+                </button>
+
+                <button
+                  type="button"
+                  class="statut-btn excuse"
+                  [class.active]="
+                    presence.get('statut')?.value === 'excusé'
+                  "
+                  (click)="onStatutChange(i, 'excusé')"
+                >
+                  <span class="statut-icon">📝</span>
+                  <span class="statut-text">Excusé</span>
+                </button>
+              </div>
+
+              <!-- Affichage du statut actuel -->
+              <div
+                class="current-statut"
+                [class]="
+                  'statut-' + (presence.get('statut')?.value || 'présent')
+                "
+              >
+                Statut:
+                <strong>{{
+                  presence.get("statut")?.value || "présent"
+                }}</strong>
+              </div>
+            </td>
+            <td class="remarque-cell">
+              <textarea
+                formControlName="remarque"
+                placeholder="Remarque optionnelle..."
+                rows="2"
+                class="remarque-input"
+              ></textarea>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Actions globales rapides -->
+    <div class="quick-actions">
+      <h4>Actions rapides :</h4>
+      <div class="action-buttons">
+        <button
+          type="button"
+          class="btn-sm btn-success"
+          (click)="setAllStatut('présent')"
+        >
+          ✅ Tous présents
+        </button>
+        <button
+          type="button"
+          class="btn-sm btn-danger"
+          (click)="setAllStatut('absent')"
+        >
+          ❌ Tous absents
+        </button>
+        <button
+          type="button"
+          class="btn-sm btn-warning"
+          (click)="setAllStatut('retard')"
+        >
+          ⏰ Tous en retard
+        </button>
+        <button
+          type="button"
+          class="btn-sm btn-info"
+          (click)="setAllStatut('excusé')"
+        >
+          📝 Tous excusés
+        </button>
+        <button
+          type="button"
+          class="btn-sm btn-secondary"
+          (click)="clearAllRemarques()"
+        >
+          🗑️ Effacer toutes les remarques
+        </button>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button
+        type="button"
+        class="btn-secondary"
+        (click)="previousStep()"
+      >
+        ← Retour à la sélection
+      </button>
+      <button
+        type="submit"
+        class="btn-primary"
+        [disabled]="isLoading || step2Form.invalid"
+      >
+        <span *ngIf="!isLoading">
+          💾 Enregistrer {{ getTotalApprentis() }} présence(s)
+        </span>
+        <span *ngIf="isLoading"> ⏳ Enregistrement en cours... </span>
+      </button>
+    </div>
+  </form>
+</div>
+    </div>
+  </div>
+
+  <!-- Dialogues de confirmation -->
+  <div
+    class="dialog-overlay"
+    *ngIf="showSuccessDialog || showErrorDialog || showConfirmDialog"
+  >
+    <!-- Dialogue de succès -->
+    <div class="dialog success-dialog" *ngIf="showSuccessDialog">
+      <div class="dialog-icon success">
+        <svg width="48" height="48" viewBox="0 0 20 20" fill="currentColor">
+          <path
+            fill-rule="evenodd"
+            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+            clip-rule="evenodd"
+          />
+        </svg>
+      </div>
+      <div class="dialog-content">
+        <h3>{{ dialogTitle }}</h3>
+        <p [innerHTML]="dialogMessage"></p>
+        <p *ngIf="successApprentiName" class="apprenti-name">
+          Apprenti: <strong>{{ successApprentiName }}</strong>
+        </p>
+      </div>
+      <div class="dialog-actions">
+        <button class="btn-success" (click)="closeAllDialogs()">Compris</button>
+      </div>
+    </div>
+
+    <!-- Dialogue d'erreur -->
+    <div class="dialog error-dialog" *ngIf="showErrorDialog">
+      <div class="dialog-icon error">
+        <svg width="48" height="48" viewBox="0 0 20 20" fill="currentColor">
+          <path
+            fill-rule="evenodd"
+            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293z"
+            clip-rule="evenodd"
+          />
+        </svg>
+      </div>
+      <div class="dialog-content">
+        <h3>{{ dialogTitle }}</h3>
+        <p>{{ dialogMessage }}</p>
+      </div>
+      <div class="dialog-actions">
+        <button class="btn-primary" (click)="closeAllDialogs()">OK</button>
+      </div>
+    </div>
+
+    <!-- Dialogue de confirmation de suppression -->
+    <div class="dialog confirm-dialog" *ngIf="showConfirmDialog">
+      <div class="dialog-icon warning">
+        <svg width="48" height="48" viewBox="0 0 20 20" fill="currentColor">
+          <path
+            fill-rule="evenodd"
+            d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+            clip-rule="evenodd"
+          />
+        </svg>
+      </div>
+      <div class="dialog-content">
+        <h3>{{ dialogTitle }}</h3>
+        <p [innerHTML]="dialogMessage"></p>
+      </div>
+      <div class="dialog-actions">
+        <button class="btn-secondary" (click)="closeAllDialogs()">
+          Annuler
+        </button>
+        <button class="btn-danger" (click)="confirmDelete()">Supprimer</button>
+      </div>
+    </div>
+  </div>
+</div>

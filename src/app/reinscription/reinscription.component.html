@@ -1,0 +1,889 @@
+<div class="page-container">
+  <!-- En-tête -->
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-text">
+        <h1 class="page-title">
+          <i class="fas fa-sync-alt me-3"></i>
+          Gestion des Réinscriptions
+        </h1>
+        <p class="page-subtitle">
+          Gérez les demandes de réinscription des apprentis dans le système
+        </p>
+      </div>
+      <button
+        class="btn btn-primary btn-lg"
+        (click)="openForm()"
+        [attr.disabled]="isLoading ? true : null"
+      >
+        <i class="fas fa-plus-circle me-2"></i>
+        Nouvelle Réinscription
+      </button>
+    </div>
+  </div>
+
+  <!-- Statistiques améliorées -->
+  <div class="stats-section" *ngIf="stats && stats.total_reinscriptions > 0">
+    <div class="stats-grid">
+      <div class="stat-card stat-total">
+        <div class="stat-icon">
+          <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+            <path
+              d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"
+            />
+          </svg>
+        </div>
+        <div class="stat-content">
+          <div class="stat-number">{{ stats.total_reinscriptions }}</div>
+          <div class="stat-label">Total Réinscriptions</div>
+        </div>
+        <div class="stat-trend">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+            <path
+              fill-rule="evenodd"
+              d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L11 10.586 14.586 7H12z"
+              clip-rule="evenodd"
+            />
+          </svg>
+        </div>
+      </div>
+
+      <div class="stat-card stat-validated">
+        <div class="stat-icon">
+          <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+            <path
+              fill-rule="evenodd"
+              d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+              clip-rule="evenodd"
+            />
+          </svg>
+        </div>
+        <div class="stat-content">
+          <div class="stat-number">{{ stats.validees }}</div>
+          <div class="stat-label">Validées</div>
+        </div>
+        <div class="stat-percentage">
+          {{
+            (stats.validees / stats.total_reinscriptions) * 100
+              | number : "1.0-0"
+          }}%
+        </div>
+      </div>
+
+      <div class="stat-card stat-pending">
+        <div class="stat-icon">
+          <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+            <path
+              fill-rule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
+              clip-rule="evenodd"
+            />
+          </svg>
+        </div>
+        <div class="stat-content">
+          <div class="stat-number">{{ stats.en_attente }}</div>
+          <div class="stat-label">En Attente</div>
+        </div>
+        <div class="stat-badge" *ngIf="stats.en_attente > 0">
+          {{ stats.en_attente }}
+        </div>
+      </div>
+
+      <div class="stat-card stat-refused">
+        <div class="stat-icon">
+          <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+            <path
+              fill-rule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+              clip-rule="evenodd"
+            />
+          </svg>
+        </div>
+        <div class="stat-content">
+          <div class="stat-number">{{ stats.refusees }}</div>
+          <div class="stat-label">Refusées</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Barre de contrôle améliorée -->
+  <div class="control-bar">
+    <div class="control-group">
+      <div class="search-container">
+        <div class="search-box">
+          <i class="fas fa-search search-icon"></i>
+          <input
+            type="text"
+            class="search-input"
+            placeholder="Rechercher un apprenti, une formation..."
+            [(ngModel)]="searchTerm"
+            (input)="applyFilters()"
+            [attr.disabled]="isLoading ? true : null"
+          />
+          <div class="search-actions">
+            <button
+              class="btn-search-clear"
+              *ngIf="searchTerm"
+              (click)="searchTerm = ''; applyFilters()"
+            >
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="filter-container">
+        <div class="filter-group">
+          <label class="filter-label">
+            <i class="fas fa-filter me-2"></i>
+            Filtres
+          </label>
+          <select
+            class="filter-select"
+            [(ngModel)]="filterStatut"
+            (change)="applyFilters()"
+            [attr.disabled]="isLoading ? true : null"
+          >
+            <option value="all">Tous les statuts</option>
+            <option value="en_attente">En attente</option>
+            <option value="validee">Validées</option>
+            <option value="refusee">Refusées</option>
+            <option value="annulee">Annulées</option>
+          </select>
+        </div>
+
+        <div class="view-toggle-group">
+          <label class="view-label">Affichage</label>
+          <div class="view-toggle">
+            <button
+              class="view-btn"
+              [class.active]="currentView === 'cards'"
+              (click)="switchView('cards')"
+              [attr.disabled]="isLoading ? true : null"
+              title="Vue cartes"
+            >
+              <i class="fas fa-th-large"></i>
+            </button>
+            <button
+              class="view-btn"
+              [class.active]="currentView === 'table'"
+              (click)="switchView('table')"
+              [attr.disabled]="isLoading ? true : null"
+              title="Vue tableau"
+            >
+              <i class="fas fa-list"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="results-info" *ngIf="filteredReinscriptions.length > 0">
+      <span class="results-count">
+        {{ filteredReinscriptions.length }} réinscription(s) trouvée(s)
+      </span>
+    </div>
+  </div>
+
+  <!-- État de chargement amélioré -->
+  <div class="loading-section" *ngIf="isLoading">
+    <div class="loading-content">
+      <div class="loading-spinner">
+        <div class="spinner"></div>
+      </div>
+      <div class="loading-text">
+        <h3>Chargement des réinscriptions</h3>
+        <p>Veuillez patienter pendant le chargement des données...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vue Cartes améliorée -->
+  <div
+    class="cards-section"
+    *ngIf="
+      !isLoading && currentView === 'cards' && filteredReinscriptions.length > 0
+    "
+  >
+    <div class="cards-grid">
+      <div
+        class="reinscription-card"
+        *ngFor="let reinscription of paginatedReinscriptions"
+        [class.card-pending]="reinscription.statut === 'en_attente'"
+        [class.card-validated]="reinscription.statut === 'validee'"
+        [class.card-refused]="reinscription.statut === 'refusee'"
+      >
+        <div class="card-header">
+          <div class="user-avatar">
+            {{ reinscription.apprenti_prenom?.charAt(0)
+            }}{{ reinscription.apprenti_nom?.charAt(0) }}
+          </div>
+          <div class="user-info">
+            <h4 class="user-name">
+              {{ reinscription.apprenti_prenom }}
+              {{ reinscription.apprenti_nom }}
+            </h4>
+            <p class="user-email">{{ reinscription.apprenti_email }}</p>
+          </div>
+          <div class="card-badge" [ngClass]="'badge-' + reinscription.statut">
+            {{ getStatutLabel(reinscription.statut) }}
+          </div>
+        </div>
+
+        <div class="card-body">
+          <div class="card-details">
+            <div class="detail-item">
+              <i class="fas fa-graduation-cap"></i>
+              <div class="detail-content">
+                <span class="detail-label">Formation</span>
+                <span class="detail-value">{{
+                  reinscription.formation_metier
+                }}</span>
+              </div>
+            </div>
+
+            <div class="detail-item">
+              <i class="fas fa-calendar-alt"></i>
+              <div class="detail-content">
+                <span class="detail-label">Date réinscription</span>
+                <span class="detail-value">{{
+                  reinscription.date_reinscription | date : "dd/MM/yyyy"
+                }}</span>
+              </div>
+            </div>
+
+            <div class="detail-item" *ngIf="reinscription.motif_reinscription">
+              <i class="fas fa-comment-dots"></i>
+              <div class="detail-content">
+                <span class="detail-label">Motif</span>
+                <span class="detail-value motif-text">{{
+                  reinscription.motif_reinscription
+                }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-footer">
+          <div class="card-actions">
+            <button
+              class="btn-action btn-validate"
+              *ngIf="reinscription.statut === 'en_attente'"
+              (click)="validerReinscription(reinscription)"
+              [attr.disabled]="isLoading ? true : null"
+              title="Valider la réinscription"
+            >
+              <i class="fas fa-check"></i>
+              <span>Valider</span>
+            </button>
+
+            <button
+              class="btn-action btn-refuse"
+              *ngIf="reinscription.statut === 'en_attente'"
+              (click)="refuserReinscription(reinscription)"
+              [attr.disabled]="isLoading ? true : null"
+              title="Refuser la réinscription"
+            >
+              <i class="fas fa-times"></i>
+              <span>Refuser</span>
+            </button>
+
+            <button
+              class="btn-action btn-delete"
+              (click)="deleteReinscription(reinscription)"
+              [attr.disabled]="isLoading ? true : null"
+              title="Supprimer la réinscription"
+            >
+              <i class="fas fa-trash-alt"></i>
+              <span>Supprimer</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vue Tableau améliorée -->
+  <div
+    class="table-section"
+    *ngIf="
+      !isLoading && currentView === 'table' && filteredReinscriptions.length > 0
+    "
+  >
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="col-apprenti">
+              <i class="fas fa-user me-2"></i>
+              Apprenti
+            </th>
+            <th class="col-formation">
+              <i class="fas fa-graduation-cap me-2"></i>
+              Formation
+            </th>
+            <th class="col-date">
+              <i class="fas fa-calendar me-2"></i>
+              Date
+            </th>
+            <th class="col-status">
+              <i class="fas fa-tag me-2"></i>
+              Statut
+            </th>
+            <th class="col-actions">
+              <i class="fas fa-cog me-2"></i>
+              Actions
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let reinscription of paginatedReinscriptions">
+            <td class="cell-apprenti">
+              <div class="apprenti-info">
+                <div class="apprenti-avatar">
+                  {{ reinscription.apprenti_prenom?.charAt(0)
+                  }}{{ reinscription.apprenti_nom?.charAt(0) }}
+                </div>
+                <div class="apprenti-details">
+                  <div class="apprenti-name">
+                    {{ reinscription.apprenti_prenom }}
+                    {{ reinscription.apprenti_nom }}
+                  </div>
+                  <div class="apprenti-contact">
+                    {{ reinscription.apprenti_email }}
+                  </div>
+                </div>
+              </div>
+            </td>
+            <td class="cell-formation">
+              <div class="formation-info">
+                <div class="formation-name">
+                  {{ reinscription.formation_metier }}
+                </div>
+                <div class="formation-type">
+                  {{ reinscription.type_formation }}
+                </div>
+              </div>
+            </td>
+            <td class="cell-date">
+              <div class="date-info">
+                <div class="date-value">
+                  {{ reinscription.date_reinscription | date : "dd/MM/yyyy" }}
+                </div>
+                <div class="date-relative">
+                  {{ reinscription.date_reinscription | date : "shortTime" }}
+                </div>
+              </div>
+            </td>
+            <td class="cell-status">
+              <span
+                class="status-badge"
+                [ngClass]="'status-' + reinscription.statut"
+              >
+                <i
+                  class="status-icon"
+                  [ngClass]="getStatusIcon(reinscription.statut)"
+                ></i>
+                {{ getStatutLabel(reinscription.statut) }}
+              </span>
+            </td>
+            <td class="cell-actions">
+              <div class="action-buttons">
+                <!-- Bouton Valider -->
+                <button
+                  class="btn-icon btn-success"
+                  *ngIf="reinscription.statut === 'en_attente'"
+                  (click)="validerReinscription(reinscription)"
+                  [attr.disabled]="isLoading ? true : null"
+                  title="Valider"
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clip-rule="evenodd"
+                    />
+                  </svg>
+                </button>
+
+                <!-- Bouton Refuser -->
+                <button
+                  class="btn-icon btn-danger"
+                  *ngIf="reinscription.statut === 'en_attente'"
+                  (click)="refuserReinscription(reinscription)"
+                  [attr.disabled]="isLoading ? true : null"
+                  title="Refuser"
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                      clip-rule="evenodd"
+                    />
+                  </svg>
+                </button>
+
+                <!-- Bouton Supprimer -->
+                <button
+                  class="btn-icon btn-secondary1"
+                  (click)="deleteReinscription(reinscription)"
+                  [attr.disabled]="isLoading ? true : null"
+                  title="Supprimer"
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                      clip-rule="evenodd"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Pagination améliorée -->
+  <div
+    class="pagination-section"
+    *ngIf="!isLoading && filteredReinscriptions.length > 0"
+  >
+    <div class="pagination-container">
+      <div class="pagination-info">
+        <span class="pagination-text">
+          Affichage de <strong>{{ getStartIndex() }}</strong> à
+          <strong>{{ getEndIndex() }}</strong> sur
+          <strong>{{ filteredReinscriptions.length }}</strong> réinscriptions
+        </span>
+      </div>
+
+      <div class="pagination-controls">
+        <button
+          class="pagination-btn"
+          [class.disabled]="currentPage === 1"
+          (click)="goToPage(1)"
+          [attr.disabled]="currentPage === 1"
+        >
+          <i class="fas fa-angle-double-left"></i>
+        </button>
+
+        <button
+          class="pagination-btn"
+          [class.disabled]="currentPage === 1"
+          (click)="previousPage()"
+          [attr.disabled]="currentPage === 1"
+        >
+          <i class="fas fa-angle-left"></i>
+        </button>
+
+        <div class="pagination-pages">
+          <span
+            *ngFor="let page of getPageNumbers()"
+            class="page-number"
+            [class.active]="page === currentPage"
+            (click)="goToPage(page)"
+          >
+            {{ page }}
+          </span>
+        </div>
+
+        <button
+          class="pagination-btn"
+          [class.disabled]="currentPage === totalPages"
+          (click)="nextPage()"
+          [attr.disabled]="currentPage === totalPages"
+        >
+          <i class="fas fa-angle-right"></i>
+        </button>
+
+        <button
+          class="pagination-btn"
+          [class.disabled]="currentPage === totalPages"
+          (click)="goToPage(totalPages)"
+          [attr.disabled]="currentPage === totalPages"
+        >
+          <i class="fas fa-angle-double-right"></i>
+        </button>
+      </div>
+
+      <div class="pagination-size">
+        <select
+          class="page-size-select"
+          (change)="onPageSizeChange($event)"
+          [attr.disabled]="isLoading ? true : null"
+        >
+          <option value="8">8 par page</option>
+          <option value="16">16 par page</option>
+          <option value="24">24 par page</option>
+          <option value="50">50 par page</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- État vide amélioré -->
+  <div
+    class="empty-section"
+    *ngIf="!isLoading && filteredReinscriptions.length === 0"
+  >
+    <div class="empty-state">
+      <div class="empty-icon">
+        <i class="fas fa-file-contract"></i>
+      </div>
+      <div class="empty-content">
+        <h3>Aucune réinscription trouvée</h3>
+        <p *ngIf="searchTerm || filterStatut !== 'all'">
+          Aucun résultat ne correspond à vos critères de recherche.
+          <br />Essayez de modifier vos filtres ou votre terme de recherche.
+        </p>
+        <p *ngIf="!searchTerm && filterStatut === 'all'">
+          Aucune réinscription n'a été créée pour le moment.
+          <br />Commencez par créer une nouvelle réinscription.
+        </p>
+        <div class="empty-actions">
+          <button
+            class="btn btn-primary"
+            (click)="openForm()"
+            *ngIf="!searchTerm && filterStatut === 'all'"
+          >
+            <i class="fas fa-plus me-2"></i>
+            Créer la première réinscription
+          </button>
+          <button
+            class="btn btn-outline"
+            (click)="searchTerm = ''; filterStatut = 'all'; applyFilters()"
+            *ngIf="searchTerm || filterStatut !== 'all'"
+          >
+            <i class="fas fa-refresh me-2"></i>
+            Réinitialiser les filtres
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal amélioré -->
+  <div class="modal-overlay" *ngIf="showForm" (click)="closeForm()">
+    <div class="modal-container" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="fas fa-sync-alt me-3"></i>
+          <h2>Nouvelle Réinscription</h2>
+        </div>
+        <button
+          class="modal-close"
+          (click)="closeForm()"
+          [attr.disabled]="isLoading ? true : null"
+        >
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <form [formGroup]="reinscriptionForm" (ngSubmit)="onSubmit()">
+          <!-- Section Apprenti -->
+          <div class="form-section">
+            <h3 class="section-title">
+              <i class="fas fa-user-graduate me-2"></i>
+              Sélection de l'apprenti
+            </h3>
+
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label required">
+                  <i class="fas fa-user me-2"></i>
+                  Apprenti
+                </label>
+                <select
+                  class="form-select"
+                  formControlName="id_apprenti"
+                  (change)="onApprentiSelect()"
+                  [class.error]="isFieldInvalid('id_apprenti')"
+                  [attr.disabled]="isLoading ? true : null"
+                >
+                  <option value="">Choisir un apprenti...</option>
+                  <option
+                    *ngFor="let apprenti of apprentis"
+                    [value]="apprenti.id_apprenti"
+                  >
+                    {{ apprenti.prenom }} {{ apprenti.nom }} •
+                    {{ apprenti.email }}
+                  </option>
+                </select>
+                <div class="form-error" *ngIf="isFieldInvalid('id_apprenti')">
+                  <i class="fas fa-exclamation-circle me-2"></i>
+                  {{ getFieldError("id_apprenti") }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section Inscription originale -->
+          <div
+            class="form-section"
+            *ngIf="reinscriptionForm.get('id_apprenti')?.value"
+          >
+            <h3 class="section-title">
+              <i class="fas fa-file-alt me-2"></i>
+              Inscription originale
+            </h3>
+
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label required">
+                  <i class="fas fa-history me-2"></i>
+                  Inscription originale
+                </label>
+                <select
+                  class="form-select"
+                  formControlName="id_inscription_originale"
+                  (change)="onInscriptionOriginaleSelect()"
+                  [class.error]="isFieldInvalid('id_inscription_originale')"
+                  [attr.disabled]="
+                    isLoading || inscriptionsOriginales.length === 0
+                      ? true
+                      : null
+                  "
+                >
+                  <option value="">Choisir une inscription originale...</option>
+                  <option
+                    *ngFor="let inscription of inscriptionsOriginales"
+                    [value]="inscription.id_inscription"
+                  >
+                    Inscription {{ inscription.id_inscription }} -
+                    {{ inscription.formation_metier || "Formation inconnue" }}
+                    ({{ inscription.date_inscription | date : "dd/MM/yyyy" }})
+                  </option>
+                </select>
+
+                <!-- Message quand apprenti sélectionné mais aucune inscription -->
+                <div
+                  class="form-hint"
+                  *ngIf="inscriptionsOriginales.length === 0"
+                >
+                  <i class="fas fa-info-circle me-2"></i>
+                  Aucune inscription trouvée pour cet apprenti
+                </div>
+
+                <!-- Message quand des inscriptions sont disponibles -->
+                <div
+                  class="form-hint"
+                  *ngIf="inscriptionsOriginales.length > 0"
+                >
+                  <i class="fas fa-check-circle me-2"></i>
+                  {{ inscriptionsOriginales.length }} inscription(s) trouvée(s)
+                </div>
+
+                <div
+                  class="form-error"
+                  *ngIf="isFieldInvalid('id_inscription_originale')"
+                >
+                  <i class="fas fa-exclamation-circle me-2"></i>
+                  {{ getFieldError("id_inscription_originale") }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section Formation -->
+          <div class="form-section">
+            <h3 class="section-title">
+              <i class="fas fa-graduation-cap me-2"></i>
+              Formation de réinscription
+            </h3>
+
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label required">
+                  <i class="fas fa-graduation-cap me-2"></i>
+                  Formation
+                </label>
+                <select
+                  class="form-select"
+                  formControlName="id_formation"
+                  [class.error]="isFieldInvalid('id_formation')"
+                  [attr.disabled]="isLoading ? true : null"
+                >
+                  <option value="">Choisir une formation...</option>
+                  <option
+                    *ngFor="let formation of formations"
+                    [value]="formation.id_formation"
+                  >
+                    {{ formation.metier }} • {{ formation.type_formation }}
+                  </option>
+                </select>
+
+                <!-- Message quand la formation est remplie automatiquement -->
+                <div
+                  class="form-hint"
+                  *ngIf="
+                    reinscriptionForm.get('id_formation')?.value &&
+                    reinscriptionForm.get('id_inscription_originale')?.value
+                  "
+                >
+                  <i class="fas fa-check-circle me-2"></i>
+                  Formation automatiquement sélectionnée depuis l'inscription
+                </div>
+
+                <!-- Message pour sélection manuelle -->
+                <div
+                  class="form-hint"
+                  *ngIf="!reinscriptionForm.get('id_formation')?.value"
+                >
+                  <i class="fas fa-lightbulb me-2"></i>
+                  La formation sera automatiquement remplie si vous sélectionnez
+                  une inscription originale
+                </div>
+
+                <div class="form-error" *ngIf="isFieldInvalid('id_formation')">
+                  <i class="fas fa-exclamation-circle me-2"></i>
+                  {{ getFieldError("id_formation") }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <div class="modal-footer">
+        <button
+          type="button"
+          class="btn btn-secondary"
+          (click)="closeForm()"
+          [attr.disabled]="isLoading ? true : null"
+        >
+          <i class="fas fa-times me-2"></i>
+          Annuler
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          (click)="onSubmit()"
+          [attr.disabled]="!reinscriptionForm.valid || isLoading ? true : null"
+        >
+          <span *ngIf="!isLoading">
+            <i class="fas fa-plus-circle me-2"></i>
+            Créer la réinscription
+          </span>
+          <span *ngIf="isLoading">
+            <i class="fas fa-spinner fa-spin me-2"></i>
+            Création en cours...
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dialogues améliorés -->
+  <div
+    class="dialog-overlay"
+    *ngIf="showSuccessDialog || showErrorDialog || showConfirmDialog"
+    (click)="closeAllDialogs()"
+  >
+    <!-- Dialogue de succès -->
+    <div
+      class="dialog success-dialog"
+      *ngIf="showSuccessDialog"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="dialog-icon">
+        <i class="fas fa-check-circle"></i>
+      </div>
+      <div class="dialog-content">
+        <h3>{{ dialogTitle }}</h3>
+        <p [innerHTML]="dialogMessage"></p>
+      </div>
+      <div class="dialog-actions">
+        <button class="btn btn-success" (click)="closeAllDialogs()">
+          <i class="fas fa-check me-2"></i>
+          Compris
+        </button>
+      </div>
+    </div>
+
+    <!-- Dialogue d'erreur -->
+    <div
+      class="dialog error-dialog"
+      *ngIf="showErrorDialog"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="dialog-icon">
+        <i class="fas fa-exclamation-triangle"></i>
+      </div>
+      <div class="dialog-content">
+        <h3>{{ dialogTitle }}</h3>
+        <p [innerHTML]="dialogMessage"></p>
+      </div>
+      <div class="dialog-actions">
+        <button class="btn btn-danger" (click)="closeAllDialogs()">
+          <i class="fas fa-times me-2"></i>
+          Fermer
+        </button>
+      </div>
+    </div>
+
+    <!-- Dialogue de confirmation -->
+    <div
+      class="dialog confirm-dialog"
+      *ngIf="showConfirmDialog"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="dialog-icon">
+        <i class="fas fa-question-circle"></i>
+      </div>
+      <div class="dialog-content">
+        <h3>{{ dialogTitle }}</h3>
+        <p [innerHTML]="dialogMessage"></p>
+        <div class="confirm-details" *ngIf="pendingAction">
+          <div class="detail-item">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span>Cette action est irréversible</span>
+          </div>
+        </div>
+      </div>
+      <div class="dialog-actions">
+        <button
+          class="btn btn-secondary"
+          (click)="closeAllDialogs()"
+          [attr.disabled]="isLoading ? true : null"
+        >
+          <i class="fas fa-times me-2"></i>
+          Annuler
+        </button>
+        <button
+          class="btn btn-primary"
+          (click)="confirmAction()"
+          [attr.disabled]="isLoading ? true : null"
+        >
+          <span *ngIf="!isLoading">
+            <i class="fas fa-check me-2"></i>
+            Confirmer
+          </span>
+          <span *ngIf="isLoading">
+            <i class="fas fa-spinner fa-spin me-2"></i>
+            Traitement...
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

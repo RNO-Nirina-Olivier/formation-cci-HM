@@ -1,0 +1,279 @@
+<div class="page-container">
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-text">
+        <h1>Évaluations des Apprentis</h1>
+        <p class="subtitle">Moyennes générales et classement</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Statistiques générales -->
+  <div class="stats-container" *ngIf="stats.total_apprentis > 0">
+    <div class="stat-card">
+      <div class="stat-icon">
+        <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+          <path
+            d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z"
+          />
+        </svg>
+      </div>
+      <div class="stat-content">
+        <div class="stat-number">{{ stats.total_apprentis }}</div>
+        <div class="stat-label">Apprentis évalués</div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon">
+        <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+          <path
+            fill-rule="evenodd"
+            d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.414-1.414L11 9.586V6z"
+            clip-rule="evenodd"
+          />
+        </svg>
+      </div>
+      <div class="stat-content">
+        <div class="stat-number">
+          {{ stats.moyenne_globale | number : "1.1-1" }}
+        </div>
+        <div class="stat-label">Moyenne globale</div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon">
+        <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+          <path
+            fill-rule="evenodd"
+            d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L11 10.586 14.586 7H12z"
+            clip-rule="evenodd"
+          />
+        </svg>
+      </div>
+      <div class="stat-content">
+        <div class="stat-number">
+          {{ stats.meilleure_moyenne | number : "1.1-1" }}
+        </div>
+        <div class="stat-label">Meilleure moyenne</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filtres et recherche -->
+  <div class="filters-bar">
+    <div class="filters-header">
+      <h3>Filtres</h3>
+      <button class="btn-clear" (click)="clearFilters()">Effacer tout</button>
+    </div>
+    <div class="filters-row">
+      <div class="search-box">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+          <path
+            fill-rule="evenodd"
+            d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+          />
+        </svg>
+        <input
+          type="text"
+          placeholder="Rechercher par nom, prénom, formation ou mention..."
+          [(ngModel)]="searchTerm"
+          (input)="onSearchInput()"
+        />
+      </div>
+
+      <div class="filter-group">
+        <label>Formation</label>
+        <select
+          [(ngModel)]="filterFormation"
+          (change)="applyFilters()"
+          class="filter-select"
+        >
+          <option value="">Toutes les formations</option>
+          <option
+            *ngFor="let formation of formations"
+            [value]="formation.id_formation"
+          >
+            {{ formation.metier }}
+          </option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label>Trier par</label>
+        <select
+          [(ngModel)]="sortBy"
+          (change)="applySorting()"
+          class="filter-select"
+        >
+          <option value="moyenne_generale">Moyenne générale</option>
+          <option value="nom">Nom</option>
+          <option value="formation">Formation</option>
+          <option value="mention">Mention</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label>Ordre</label>
+        <select
+          [(ngModel)]="sortDirection"
+          (change)="applySorting()"
+          class="filter-select"
+        >
+          <option value="desc">Décroissant</option>
+          <option value="asc">Croissant</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tableau des évaluations -->
+  <div class="table-container">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th (click)="sort('nom')" class="sortable">
+            <div class="th-content">
+              <span>Apprenti</span>
+              <span class="sort-icon">{{ getSortIcon("nom") }}</span>
+            </div>
+          </th>
+          <th (click)="sort('formation')" class="sortable">
+            <div class="th-content">
+              <span>Formation</span>
+              <span class="sort-icon">{{ getSortIcon("formation") }}</span>
+            </div>
+          </th>
+          <th class="text-center">Matières</th>
+          <th (click)="sort('moyenne_generale')" class="text-center sortable">
+            <div class="th-content">
+              <span>Moyenne Générale</span>
+              <span class="sort-icon">{{
+                getSortIcon("moyenne_generale")
+              }}</span>
+            </div>
+          </th>
+          <th (click)="sort('mention')" class="text-center sortable">
+            <div class="th-content">
+              <span>Mention</span>
+              <span class="sort-icon">{{ getSortIcon("mention") }}</span>
+            </div>
+          </th>
+          <th class="text-center">Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr
+          *ngFor="let evaluation of filteredEvaluations"
+          [class]="'note-' + getMoyenneColor(evaluation.moyenne_generale)"
+        >
+          <td>
+            <div class="user-cell">
+              <div class="avatar">{{ getApprentiInitials(evaluation) }}</div>
+              <div class="user-details">
+                <strong>{{ getApprentiFullName(evaluation) }}</strong>
+                <span *ngIf="evaluation.email" class="user-email">{{
+                  evaluation.email
+                }}</span>
+                <small>ID: {{ evaluation.id_apprenti }}</small>
+              </div>
+            </div>
+          </td>
+          <td>{{ evaluation.formation_metier || "Non spécifié" }}</td>
+          <td class="text-center">
+            <span class="coefficient-badge">
+              {{ evaluation.matieres_notees || 0 }}/{{
+                evaluation.total_matieres || 0
+              }}
+            </span>
+          </td>
+          <td class="text-center">
+            <strong
+              class="moyenne-badge"
+              [class]="getMoyenneColor(evaluation.moyenne_generale)"
+            >
+              {{
+                evaluation.moyenne_generale !== null &&
+                evaluation.moyenne_generale !== undefined
+                  ? (evaluation.moyenne_generale | number : "1.2-2") + "/20"
+                  : "N/A"
+              }}
+            </strong>
+          </td>
+          <td class="text-center">
+            <span
+              class="mention-badge"
+              [class]="getMentionClass(evaluation.mention)"
+            >
+              {{ evaluation.mention || "Non évalué" }}
+            </span>
+          </td>
+          <td class="text-center">
+            <div
+              class="notes-range"
+              *ngIf="
+                evaluation.note_minimale !== null &&
+                evaluation.note_maximale !== null
+              "
+            >
+              <small
+                >Min: {{ evaluation.note_minimale | number : "1.1-1" }}</small
+              >
+              <small
+                >Max: {{ evaluation.note_maximale | number : "1.1-1" }}</small
+              >
+            </div>
+            <div
+              class="notes-range"
+              *ngIf="
+                evaluation.note_minimale === null ||
+                evaluation.note_maximale === null
+              "
+            >
+              <small>Non disponible</small>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- État vide -->
+    <div
+      class="empty-state"
+      *ngIf="filteredEvaluations.length === 0 && !isLoading"
+    >
+      <div class="empty-icon">
+        <svg width="80" height="80" viewBox="0 0 20 20" fill="currentColor">
+          <path
+            fill-rule="evenodd"
+            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293z"
+            clip-rule="evenodd"
+          />
+        </svg>
+      </div>
+      <h3>Aucune évaluation trouvée</h3>
+      <p *ngIf="searchTerm || filterFormation">
+        Aucun résultat ne correspond à vos critères de recherche.
+      </p>
+      <p *ngIf="!searchTerm && !filterFormation">
+        Aucune donnée d'évaluation disponible.
+      </p>
+    </div>
+
+    <!-- État de chargement -->
+    <div class="loading-state" *ngIf="isLoading">
+      <div class="loading-spinner"></div>
+      <p>Chargement des évaluations...</p>
+    </div>
+
+    <!-- Informations de tri -->
+    <div class="sort-info" *ngIf="filteredEvaluations.length > 0">
+      <small>
+        Trié par: <strong>{{ getSortLabel() }}</strong> ({{
+          sortDirection === "asc" ? "croissant" : "décroissant"
+        }}) • {{ filteredEvaluations.length }} résultat(s)
+      </small>
+    </div>
+  </div>
+</div>

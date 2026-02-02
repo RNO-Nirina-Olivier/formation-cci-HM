@@ -1,0 +1,1175 @@
+<div class="page-container">
+  <!-- Header principal -->
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-text">
+        <h1>Suivi Pratique</h1>
+        <p class="subtitle">{{ suivis.length }} stages en entreprise</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn-primary" (click)="openForm()">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+            <path
+              fill-rule="evenodd"
+              d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
+            />
+          </svg>
+          Nouveau Suivi
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filtres -->
+  <div class="filters-bar">
+    <div class="filters-header">
+      <h3>Filtres</h3>
+      <button class="btn-clear" (click)="clearFilters()">Effacer tout</button>
+    </div>
+    <div class="filters-row">
+      <div class="search-box">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+          <path
+            fill-rule="evenodd"
+            d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+          />
+        </svg>
+        <input
+          type="text"
+          placeholder="Rechercher par apprenti, entreprise ou formation..."
+          [(ngModel)]="searchTerm"
+          (input)="applyFilters()"
+        />
+      </div>
+
+      <div class="filter-group">
+        <label>Statut</label>
+        <select
+          [(ngModel)]="filterStatut"
+          (change)="applyFilters()"
+          class="filter-select"
+        >
+          <option value="">Tous les statuts</option>
+          <option value="en-cours">En cours</option>
+          <option value="termine">Terminé</option>
+          <option value="a-venir">À venir</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label>Formation</label>
+        <select
+          [(ngModel)]="filterFormation"
+          (change)="applyFilters()"
+          class="filter-select"
+        >
+          <option value="">Toutes les formations</option>
+          <option
+            *ngFor="let formation of formations"
+            [value]="formation.id_formation"
+          >
+            {{ formation.metier }}
+          </option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Statistiques -->
+  <div class="stats-container" *ngIf="getStats().total > 0">
+    <div class="stat-card" [class.highlight]="getStats().enCours > 0">
+      <div class="stat-icon">
+        <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+          <path
+            fill-rule="evenodd"
+            d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.414-1.414L11 9.586V6z"
+            clip-rule="evenodd"
+          />
+        </svg>
+      </div>
+      <div class="stat-content">
+        <div class="stat-number">{{ getStats().total }}</div>
+        <div class="stat-label">Total des stages</div>
+      </div>
+    </div>
+    <div class="stat-card" [class.highlight]="getStats().enCours > 0">
+      <div class="stat-icon ongoing">
+        <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+          <path
+            d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"
+          />
+        </svg>
+      </div>
+      <div class="stat-content">
+        <div class="stat-number">{{ getStats().enCours }}</div>
+        <div class="stat-label">En cours</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon completed">
+        <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+          <path
+            fill-rule="evenodd"
+            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+            clip-rule="evenodd"
+          />
+        </svg>
+      </div>
+      <div class="stat-content">
+        <div class="stat-number">{{ getStats().termines }}</div>
+        <div class="stat-label">Terminés</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon company">
+        <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+          <path
+            fill-rule="evenodd"
+            d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 110 2h-3a1 1 0 01-1-1v-2a1 1 0 00-1-1H9a1 1 0 00-1 1v2a1 1 0 01-1 1H4a1 1 0 110-2V4zm3 1h2v2H7V5zm2 4H7v2h2V9zm2-4h2v2h-2V5zm2 4h-2v2h2V9z"
+            clip-rule="evenodd"
+          />
+        </svg>
+      </div>
+      <div class="stat-content">
+        <div class="stat-number">{{ getStats().entreprises }}</div>
+        <div class="stat-label">Entreprises</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contrôles de vue -->
+  <div class="view-controls">
+    <div class="view-toggle">
+      <button 
+        class="view-btn" 
+        [class.active]="currentView === 'cards'"
+        (click)="switchView('cards')"
+      >
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+          <path d="M2 4a1 1 0 011-1h2a1 1 0 011 1v1a1 1 0 01-1 1H3a1 1 0 01-1-1V4zM3 10a1 1 0 01-1-1V7a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H3zM3 16a1 1 0 01-1-1v-2a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H3z"/>
+        </svg>
+      </button>
+      <button 
+        class="view-btn" 
+        [class.active]="currentView === 'table'"
+        (click)="switchView('table')"
+      >
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M5 4a1 1 0 00-1 1v10a1 1 0 001 1h10a1 1 0 001-1V5a1 1 0 00-1-1H5zM4 5a2 2 0 012-2h10a2 2 0 012 2v10a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm2 3a1 1 0 000 2h8a1 1 0 100-2H6zm0 4a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Vue Cartes -->
+  <div class="cards-grid" *ngIf="currentView === 'cards' && filteredSuivis.length > 0">
+    <div
+      class="formation-card"
+      *ngFor="let suivi of filteredSuivis"
+      [class.card-en-cours]="isEnCours(suivi.date_fin)"
+      [class.card-termine]="isTermine(suivi.date_fin)"
+      [class.card-a-venir]="isAVenir(suivi.date_debut)"
+    >
+      <div
+        class="card-status-badge"
+        [class.status-en-cours]="isEnCours(suivi.date_fin)"
+        [class.status-termine]="isTermine(suivi.date_fin)"
+        [class.status-a-venir]="isAVenir(suivi.date_debut)"
+      >
+        {{
+          isAVenir(suivi.date_debut)
+            ? "À venir"
+            : isEnCours(suivi.date_fin)
+            ? "En cours"
+            : "Terminé"
+        }}
+      </div>
+
+      <div class="card-header">
+        <div class="card-avatar">
+          {{ suivi.apprenti_prenom?.charAt(0) || "A"
+          }}{{ suivi.apprenti_nom?.charAt(0) || "P" }}
+        </div>
+        <div class="card-header-content">
+          <h3 class="card-title">
+            {{ suivi.apprenti_prenom || "Prénom" }}
+            {{ suivi.apprenti_nom || "Nom" }}
+          </h3>
+          <p class="card-subtitle">
+            {{ suivi.formation_metier || "Formation" }}
+          </p>
+          <!-- CORRECTION : Utiliser id_inscription et id_reinscription -->
+          <div class="card-ids" *ngIf="suivi.id_inscription || suivi.id_reinscription">
+            <span class="id-badge" *ngIf="suivi.id_inscription">
+              Insc: {{ suivi.id_inscription }}
+            </span>
+            <span class="id-badge" *ngIf="suivi.id_reinscription">
+              Réinsc: {{ suivi.id_reinscription }}
+            </span>
+          </div>
+        </div>
+        <div class="card-duration">
+          {{ getDureeStage(suivi.date_debut, suivi.date_fin) }}
+        </div>
+      </div>
+
+      <div class="card-body">
+        <!-- Informations Entreprise -->
+        <div class="info-section">
+          <div class="info-item">
+            <div class="info-icon">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+            </div>
+            <div class="info-content">
+              <span class="info-label">Entreprise</span>
+              <span class="info-value">{{
+                suivi.entreprise || "Non spécifiée"
+              }}</span>
+              <span class="info-address">{{
+                suivi.adresse_entreprise || "Adresse non spécifiée"
+              }}</span>
+            </div>
+          </div>
+
+          <div class="info-item">
+            <div class="info-icon">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"
+                />
+              </svg>
+            </div>
+            <div class="info-content">
+              <span class="info-label">Encadrant</span>
+              <span class="info-value">{{
+                suivi.encadrant || "Non spécifié"
+              }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Période -->
+        <div class="period-section">
+          <div class="period-item">
+            <span class="period-label">Début</span>
+            <span class="period-date">{{
+              formatDate(suivi.date_debut)
+            }}</span>
+          </div>
+          <div class="period-arrow">→</div>
+          <div class="period-item">
+            <span class="period-label">Fin</span>
+            <span class="period-date">{{
+              formatDate(suivi.date_fin)
+            }}</span>
+          </div>
+        </div>
+
+        <!-- Contacts -->
+        <div
+          class="contact-section"
+          *ngIf="suivi.apprenti_email || suivi.apprenti_telephone"
+        >
+          <div class="contact-item" *ngIf="suivi.apprenti_email">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"
+              />
+              <path
+                d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"
+              />
+            </svg>
+            <a
+              [href]="'mailto:' + suivi.apprenti_email"
+              class="contact-link"
+              >{{ suivi.apprenti_email }}</a
+            >
+          </div>
+          <div class="contact-item" *ngIf="suivi.apprenti_telephone">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"
+              />
+            </svg>
+            <a
+              [href]="'tel:' + suivi.apprenti_telephone"
+              class="contact-link"
+              >{{ suivi.apprenti_telephone }}</a
+            >
+          </div>
+        </div>
+
+        <!-- Évaluation -->
+        <div class="evaluation-section" *ngIf="suivi.evaluation">
+          <div class="evaluation-header">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                clip-rule="evenodd"
+              />
+            </svg>
+            <span>Évaluation</span>
+          </div>
+          <div class="evaluation-content">
+            {{ suivi.evaluation }}
+          </div>
+        </div>
+      </div>
+
+      <div class="card-footer">
+        <button
+          class="btn-action edit"
+          (click)="openForm(suivi)"
+          title="Modifier"
+        >
+          <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
+            <path
+              d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"
+            />
+          </svg>
+        </button>
+        <button
+          class="btn-action delete"
+          (click)="deleteSuivi(suivi.id_suivi)"
+          title="Supprimer"
+        >
+          <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
+            <path
+              fill-rule="evenodd"
+              d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+            />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vue Tableau -->
+  <div class="table-container" *ngIf="currentView === 'table' && filteredSuivis.length > 0">
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="sortable" (click)="sortTable('apprenti_nom')">
+              <span>Apprenti</span>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                [class.asc]="
+                  sortField === 'apprenti_nom' && sortDirection === 'asc'
+                "
+                [class.desc]="
+                  sortField === 'apprenti_nom' && sortDirection === 'desc'
+                "
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+            </th>
+            <th>Formation</th>
+            <th>Entreprise</th>
+            <th class="sortable" (click)="sortTable('date_debut')">
+              <span>Période</span>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                [class.asc]="
+                  sortField === 'date_debut' && sortDirection === 'asc'
+                "
+                [class.desc]="
+                  sortField === 'date_debut' && sortDirection === 'desc'
+                "
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+            </th>
+            <th>Durée</th>
+            <th class="sortable" (click)="sortTable('date_fin')">
+              <span>Statut</span>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                [class.asc]="
+                  sortField === 'date_fin' && sortDirection === 'asc'
+                "
+                [class.desc]="
+                  sortField === 'date_fin' && sortDirection === 'desc'
+                "
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+            </th>
+            <th class="actions-column">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            *ngFor="let suivi of filteredSuivis"
+            [class.row-en-cours]="isEnCours(suivi.date_fin)"
+            [class.row-termine]="isTermine(suivi.date_fin)"
+            [class.row-a-venir]="isAVenir(suivi.date_debut)"
+          >
+            <td class="apprenti-cell">
+              <div class="apprenti-info">
+                <div class="avatar-small">
+                  {{ suivi.apprenti_prenom?.charAt(0) || "A"
+                  }}{{ suivi.apprenti_nom?.charAt(0) || "P" }}
+                </div>
+                <div class="apprenti-details">
+                  <div class="apprenti-name">
+                    {{ suivi.apprenti_prenom || "Prénom" }}
+                    {{ suivi.apprenti_nom || "Nom" }}
+                  </div>
+                  <!-- CORRECTION : Utiliser id_inscription et id_reinscription -->
+                  <div class="apprenti-ids">
+                    <span class="id-text" *ngIf="suivi.id_inscription">
+                      Insc: {{ suivi.id_inscription }}
+                    </span>
+                    <span class="id-text" *ngIf="suivi.id_reinscription">
+                      Réinsc: {{ suivi.id_reinscription }}
+                    </span>
+                  </div>
+                  <div class="apprenti-contact">
+                    <span *ngIf="suivi.apprenti_email" class="contact-email">
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"
+                        />
+                        <path
+                          d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"
+                        />
+                      </svg>
+                      {{ suivi.apprenti_email }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="formation-tag">{{
+                suivi.formation_metier || "Formation"
+              }}</span>
+            </td>
+            <td>
+              <div class="entreprise-info">
+                <div class="entreprise-name">
+                  {{ suivi.entreprise || "Non spécifiée" }}
+                </div>
+                <div
+                  class="entreprise-address"
+                  *ngIf="suivi.adresse_entreprise"
+                >
+                  {{ suivi.adresse_entreprise }}
+                </div>
+              </div>
+            </td>
+            <td>
+              <div class="period-info">
+                <div class="period-dates">
+                  <span class="date">{{
+                    formatDate(suivi.date_debut)
+                  }}</span>
+                  <span class="date-separator">→</span>
+                  <span class="date">{{
+                    formatDate(suivi.date_fin)
+                  }}</span>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="duration-badge">
+                {{ getDureeStage(suivi.date_debut, suivi.date_fin) }}
+              </span>
+            </td>
+            <td>
+              <span
+                class="status-badge"
+                [class.status-en-cours]="isEnCours(suivi.date_fin)"
+                [class.status-termine]="isTermine(suivi.date_fin)"
+                [class.status-a-venir]="isAVenir(suivi.date_debut)"
+              >
+                {{
+                  isAVenir(suivi.date_debut)
+                    ? "À venir"
+                    : isEnCours(suivi.date_fin)
+                    ? "En cours"
+                    : "Terminé"
+                }}
+              </span>
+            </td>
+            <td class="actions-cell">
+              <div class="table-actions">
+                <button
+                  class="btn-action edit"
+                  (click)="openForm(suivi)"
+                  title="Modifier"
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"
+                    />
+                  </svg>
+                </button>
+                <button
+                  class="btn-action delete"
+                  (click)="deleteSuivi(suivi.id_suivi)"
+                  title="Supprimer"
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- État vide -->
+  <div class="empty-state" *ngIf="filteredSuivis.length === 0 && !isLoading">
+    <div class="empty-icon">
+      <svg width="80" height="80" viewBox="0 0 20 20" fill="currentColor">
+        <path
+          fill-rule="evenodd"
+          d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293z"
+          clip-rule="evenodd"
+        />
+      </svg>
+    </div>
+    <h3>Aucun suivi trouvé</h3>
+    <p *ngIf="searchTerm || filterStatut || filterFormation">
+      Aucun résultat ne correspond à vos critères de recherche.
+    </p>
+    <p *ngIf="!searchTerm && !filterStatut && !filterFormation">
+      Commencez par ajouter votre premier suivi de stage.
+    </p>
+    <button class="btn-primary" (click)="openForm()">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+        <path
+          fill-rule="evenodd"
+          d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
+        />
+      </svg>
+      Ajouter le premier suivi
+    </button>
+  </div>
+
+  <!-- État de chargement -->
+  <div class="loading-state" *ngIf="isLoading">
+    <div class="loading-spinner"></div>
+    <p>Chargement des suivis...</p>
+  </div>
+</div>
+
+<!-- Modal Formulaire Suivi -->
+<div class="modal-overlay" *ngIf="showForm" (click)="closeForm()">
+  <div class="modal-container" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>{{ isEditing ? "Modifier" : "Ajouter" }} un Suivi Pratique</h2>
+      <button class="btn-close" (click)="closeForm()">
+        <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+          <path
+            fill-rule="evenodd"
+            d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+          />
+        </svg>
+      </button>
+    </div>
+
+    <form [formGroup]="suiviForm" (ngSubmit)="onSubmit()" class="modal-body">
+      <div class="form-scroll">
+        <!-- Section Informations Personnelles -->
+        <div class="form-section">
+          <div class="section-header">
+            <div class="section-icon">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+            </div>
+            <h3>Informations Personnelles</h3>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="id_apprenti" class="form-label">
+                Apprenti <span class="required">*</span>
+              </label>
+              <select
+                id="id_apprenti"
+                formControlName="id_apprenti"
+                [class.error]="isFieldInvalid('id_apprenti')"
+                class="form-select"
+              >
+                <option value="">Sélectionner un apprenti</option>
+                <option
+                  *ngFor="let apprenti of apprentis"
+                  [value]="apprenti.id_apprenti"
+                >
+                  {{ apprenti.prenom }} {{ apprenti.nom }}
+                  <!-- CORRECTION : Utiliser id_inscription et id_reinscription -->
+                  <span *ngIf="apprenti.id_inscription"> - Insc: {{ apprenti.id_inscription }}</span>
+                  <span *ngIf="apprenti.id_reinscription"> - Réinsc: {{ apprenti.id_reinscription }}</span>
+                </option>
+              </select>
+              <div class="error-message" *ngIf="isFieldInvalid('id_apprenti')">
+                {{ getFieldError("id_apprenti") }}
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="id_formation" class="form-label">
+                Formation <span class="required">*</span>
+              </label>
+              <select
+                id="id_formation"
+                formControlName="id_formation"
+                [class.error]="isFieldInvalid('id_formation')"
+                (change)="onFormationChange($any($event.target).value)"
+                class="form-select"
+                [class.warning]="
+                  selectedFormation?.type_formation !== 'professionnel_dual'
+                "
+              >
+                <option value="">Sélectionner une formation</option>
+                <option
+                  *ngFor="let formation of formations"
+                  [value]="formation.id_formation"
+                  [class.eligible]="
+                    formation.type_formation === 'professionnel_dual'
+                  "
+                  [class.not-eligible]="
+                    formation.type_formation !== 'professionnel_dual'
+                  "
+                >
+                  {{ formation.metier }}
+                  <span
+                    *ngIf="formation.type_formation"
+                    class="formation-type-badge"
+                  >
+                    ({{ getFormationTypeLabel(formation.type_formation) }})
+                  </span>
+                </option>
+              </select>
+              <div class="error-message" *ngIf="isFieldInvalid('id_formation')">
+                {{ getFieldError("id_formation") }}
+              </div>
+
+              <!-- Indication sur l'éligibilité -->
+              <div class="formation-info-alert" *ngIf="selectedFormation">
+                <div
+                  class="formation-type-indicator"
+                  [class.eligible]="
+                    selectedFormation.type_formation === 'professionnel_dual'
+                  "
+                  [class.not-eligible]="
+                    selectedFormation.type_formation !== 'professionnel_dual'
+                  "
+                >
+                  <span class="indicator-dot"></span>
+                  <span class="indicator-text">
+                    {{
+                      getFormationTypeLabel(selectedFormation.type_formation)
+                    }}
+                    <span
+                      *ngIf="
+                        selectedFormation.type_formation ===
+                        'professionnel_dual'
+                      "
+                      class="eligible-text"
+                    >
+                      - Éligible au suivi pratique
+                    </span>
+                    <span
+                      *ngIf="
+                        selectedFormation.type_formation !==
+                        'professionnel_dual'
+                      "
+                      class="not-eligible-text"
+                    >
+                      - Non éligible au suivi pratique
+                    </span>
+                  </span>
+                </div>
+
+                <!-- Message d'avertissement pour les formations non éligibles -->
+                <div
+                  class="warning-message"
+                  *ngIf="
+                    selectedFormation.type_formation !== 'professionnel_dual'
+                  "
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                      clip-rule="evenodd"
+                    />
+                  </svg>
+                  <span
+                    >Le suivi pratique est réservé aux formations de type
+                    "Professionnel Dual"</span
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section Entreprise -->
+        <div class="form-section">
+          <div class="section-header">
+            <div class="section-icon">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 110 2h-3a1 1 0 01-1-1v-2a1 1 0 00-1-1H9a1 1 0 00-1 1v2a1 1 0 01-1 1H4a1 1 0 110-2V4zm3 1h2v2H7V5zm2 4H7v2h2V9zm2-4h2v2h-2V5zm2 4h-2v2h2V9z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+            </div>
+            <h3>Informations Entreprise</h3>
+          </div>
+
+          <div class="form-group">
+            <label for="entreprise" class="form-label">
+              Entreprise <span class="required">*</span>
+            </label>
+            <input
+              id="entreprise"
+              type="text"
+              formControlName="entreprise"
+              placeholder="Ex: Tech Solutions SARL"
+              [class.error]="isFieldInvalid('entreprise')"
+              class="form-input"
+              [disabled]="
+                selectedFormation?.type_formation !== 'professionnel_dual'
+              "
+            />
+            <div class="error-message" *ngIf="isFieldInvalid('entreprise')">
+              {{ getFieldError("entreprise") }}
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="adresse_entreprise" class="form-label">
+              Adresse de l'entreprise <span class="required">*</span>
+            </label>
+            <input
+              id="adresse_entreprise"
+              type="text"
+              formControlName="adresse_entreprise"
+              placeholder="Ex: Lotissement ABC, Antananarivo"
+              [class.error]="isFieldInvalid('adresse_entreprise')"
+              class="form-input"
+              [disabled]="
+                selectedFormation?.type_formation !== 'professionnel_dual'
+              "
+            />
+            <div
+              class="error-message"
+              *ngIf="isFieldInvalid('adresse_entreprise')"
+            >
+              {{ getFieldError("adresse_entreprise") }}
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="encadrant" class="form-label">
+              Encadrant en entreprise <span class="required">*</span>
+            </label>
+            <input
+              id="encadrant"
+              type="text"
+              formControlName="encadrant"
+              placeholder="Ex: M. Andriamalala"
+              [class.error]="isFieldInvalid('encadrant')"
+              class="form-input"
+              [disabled]="
+                selectedFormation?.type_formation !== 'professionnel_dual'
+              "
+            />
+            <div class="error-message" *ngIf="isFieldInvalid('encadrant')">
+              {{ getFieldError("encadrant") }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Section Période -->
+        <div class="form-section">
+          <div class="section-header">
+            <div class="section-icon">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.414-1.414L11 9.586V6z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+            </div>
+            <h3>Période du Stage</h3>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="date_debut" class="form-label">
+                Date de début <span class="required">*</span>
+              </label>
+              <input
+                id="date_debut"
+                type="date"
+                formControlName="date_debut"
+                [class.error]="isFieldInvalid('date_debut')"
+                class="form-input"
+                [disabled]="
+                  selectedFormation?.type_formation !== 'professionnel_dual'
+                "
+              />
+              <div class="error-message" *ngIf="isFieldInvalid('date_debut')">
+                {{ getFieldError("date_debut") }}
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="date_fin" class="form-label">
+                Date de fin <span class="required">*</span>
+              </label>
+              <input
+                id="date_fin"
+                type="date"
+                formControlName="date_fin"
+                [class.error]="isFieldInvalid('date_fin')"
+                class="form-input"
+                [disabled]="
+                  selectedFormation?.type_formation !== 'professionnel_dual'
+                "
+              />
+              <div class="error-message" *ngIf="isFieldInvalid('date_fin')">
+                {{ getFieldError("date_fin") }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Affichage de la durée calculée -->
+          <div
+            class="duration-info"
+            *ngIf="
+              suiviForm.get('date_debut')?.value &&
+              suiviForm.get('date_fin')?.value
+            "
+          >
+            <div class="duration-card">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.414-1.414L11 9.586V6z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+              <div class="duration-content">
+                <span class="duration-label">Durée du stage</span>
+                <span class="duration-value">
+                  {{
+                    getDureeStage(
+                      suiviForm.get("date_debut")?.value,
+                      suiviForm.get("date_fin")?.value
+                    )
+                  }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section Évaluation -->
+        <div class="form-section">
+          <div class="section-header">
+            <div class="section-icon">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M18 13V5a2 2 0 00-2-2H4a2 2 0 00-2 2v8a2 2 0 002 2h3l3 3 3-3h3a2 2 0 002-2zM5 7a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H6z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+            </div>
+            <h3>Évaluation</h3>
+          </div>
+
+          <div class="form-group">
+            <label for="evaluation" class="form-label"
+              >Notes d'évaluation</label
+            >
+            <textarea
+              id="evaluation"
+              formControlName="evaluation"
+              rows="4"
+              placeholder="Notes sur le stage, compétences acquises, points forts, axes d'amélioration..."
+              class="form-textarea"
+              [disabled]="
+                selectedFormation?.type_formation !== 'professionnel_dual'
+              "
+            ></textarea>
+            <div class="textarea-footer">
+              <div
+                class="char-count"
+                *ngIf="suiviForm.get('evaluation')?.value"
+              >
+                {{ suiviForm.get("evaluation")?.value?.length }} caractères
+              </div>
+              <div class="char-hint">Maximum 500 caractères recommandés</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" (click)="closeForm()">
+          Annuler
+        </button>
+        <button
+          type="submit"
+          class="btn-primary"
+          [disabled]="
+            isLoading ||
+            suiviForm.invalid ||
+            selectedFormation?.type_formation !== 'professionnel_dual'
+          "
+          [class.btn-disabled]="
+            selectedFormation?.type_formation !== 'professionnel_dual'
+          "
+        >
+          <span *ngIf="!isLoading">
+            {{ isEditing ? "Modifier" : "Enregistrer" }}
+            <span
+              *ngIf="selectedFormation?.type_formation !== 'professionnel_dual'"
+            >
+              (Non disponible)
+            </span>
+          </span>
+          <span *ngIf="isLoading" class="loading-text">
+            <div class="button-spinner"></div>
+            Enregistrement...
+          </span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Boîte de dialogue de confirmation de suppression -->
+<div class="modal-overlay" *ngIf="showDeleteConfirm">
+  <div class="modal-container confirmation-modal">
+    <div class="modal-header">
+      <h2>Confirmer la suppression</h2>
+      <button class="btn-close" (click)="cancelDelete()">
+        <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+          <path
+            fill-rule="evenodd"
+            d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+          />
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="dialog-content">
+        <div class="dialog-icon warning">
+          <svg width="32" height="32" viewBox="0 0 20 20" fill="currentColor">
+            <path
+              fill-rule="evenodd"
+              d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+              clip-rule="evenodd"
+            />
+          </svg>
+        </div>
+        <h3>Attention</h3>
+        <p>{{ dialogMessage }}</p>
+        <p class="text-warning">Cette action est irréversible.</p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-secondary" (click)="cancelDelete()">
+        Annuler
+      </button>
+      <button type="button" class="btn-danger" (click)="confirmDelete()">
+        Supprimer
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Boîte de dialogue de succès -->
+<div class="modal-overlay" *ngIf="showSuccessDialog">
+  <div class="modal-container success-modal">
+    <div class="modal-header">
+      <h2>Succès</h2>
+      <button class="btn-close" (click)="closeDialog()">
+        <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+          <path
+            fill-rule="evenodd"
+            d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+          />
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="dialog-content">
+        <div class="dialog-icon success">
+          <svg width="32" height="32" viewBox="0 0 20 20" fill="currentColor">
+            <path
+              fill-rule="evenodd"
+              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+              clip-rule="evenodd"
+            />
+          </svg>
+        </div>
+        <h3>Opération réussie</h3>
+        <p>{{ dialogMessage }}</p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-primary" (click)="closeDialog()">
+        OK
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Boîte de dialogue d'erreur -->
+<div class="modal-overlay" *ngIf="showErrorDialog">
+  <div class="modal-container error-modal">
+    <div class="modal-header">
+      <h2>Erreur</h2>
+      <button class="btn-close" (click)="closeDialog()">
+        <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+          <path
+            fill-rule="evenodd"
+            d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+          />
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="dialog-content">
+        <div class="dialog-icon error">
+          <svg width="32" height="32" viewBox="0 0 20 20" fill="currentColor">
+            <path
+              fill-rule="evenodd"
+              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+              clip-rule="evenodd"
+            />
+          </svg>
+        </div>
+        <h3>Une erreur est survenue</h3>
+        <p>{{ dialogMessage }}</p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-primary" (click)="closeDialog()">
+        OK
+      </button>
+    </div>
+  </div>
+</div>

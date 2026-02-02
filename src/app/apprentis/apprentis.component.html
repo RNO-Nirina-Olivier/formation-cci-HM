@@ -1,0 +1,554 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1>Gestion des Apprentis</h1>
+      <p class="subtitle">{{ apprentis.length }} apprentis inscrits</p>
+    </div>
+    <button class="btn-primary" (click)="openForm()">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+        <path
+          fill-rule="evenodd"
+          d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
+        />
+      </svg>
+      Nouvel Apprenti
+    </button>
+  </div>
+
+  <!-- Recherche et filtres -->
+  <div class="filters-bar">
+    <div class="filters-row">
+      <div class="search-box">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+          <path
+            fill-rule="evenodd"
+            d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+          />
+        </svg>
+        <input
+          type="text"
+          placeholder="Rechercher par nom, prénom, email ou ID..."
+          [(ngModel)]="searchTerm"
+          (input)="applyFilters()"
+        />
+      </div>
+      <select
+        [(ngModel)]="filterStatut"
+        (change)="applyFilters()"
+        class="filter-select"
+      >
+        <option value="">Tous les statuts</option>
+        <option value="actif">Actif</option>
+        <option value="inactif">Inactif</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="table-container">
+    <table class="data-table" *ngIf="filteredApprentis.length > 0">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nom Complet</th>
+          <th>Email</th>
+          <th>Téléphone</th>
+          <th>Niveau d'étude</th>
+          <th>Statut</th>
+          <th>Date d'inscription</th>
+          <th class="actions-col">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let apprenti of filteredApprentis">
+          <td class="id-cell">
+            <span class="id-badge">{{ apprenti.id_apprenti }}</span>
+          </td>
+          <td>
+            <div class="user-info">
+              <div class="user-avatar">
+                {{ apprenti.prenom.charAt(0) }}{{ apprenti.nom.charAt(0) }}
+              </div>
+              <div>
+                <div class="user-name">
+                  {{ apprenti.prenom }} {{ apprenti.nom }}
+                </div>
+                <div class="user-details">
+                  <small class="age"
+                    >{{ calculateAge(apprenti.date_naissance) }} ans</small
+                  >
+                  <small class="sexe">{{
+                    apprenti.sexe === "M" ? "♂" : "♀"
+                  }}</small>
+                </div>
+              </div>
+            </div>
+          </td>
+          <td>{{ apprenti.email }}</td>
+          <td>
+            {{ getTelephoneFormate(apprenti.telephone) }}
+          </td>
+          <td>
+            <span class="niveau-badge">{{
+              apprenti.niveau_etude || "Non renseigné"
+            }}</span>
+          </td>
+          <td>
+            <span
+              class="status-badge"
+              [class.status-active]="apprenti.statut === 'actif'"
+              [class.status-inactive]="apprenti.statut === 'inactif'"
+            >
+              {{ apprenti.statut === "actif" ? "Actif" : "Inactif" }}
+            </span>
+          </td>
+          <td>{{ apprenti.date_inscription | date : "dd/MM/yyyy" }}</td>
+          <td class="actions-cell">
+            <div class="actions-group">
+              <button
+                class="btn-icon small"
+                (click)="openForm(apprenti)"
+                title="Modifier"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"
+                  />
+                </svg>
+              </button>
+              <button
+                class="btn-icon small danger"
+                (click)="confirmDelete(apprenti)"
+                title="Supprimer"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                  />
+                </svg>
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- État vide -->
+    <div
+      class="empty-state"
+      *ngIf="filteredApprentis.length === 0 && !isLoading"
+    >
+      <div class="empty-icon">
+        <svg width="64" height="64" viewBox="0 0 20 20" fill="currentColor">
+          <path
+            fill-rule="evenodd"
+            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293z"
+          />
+        </svg>
+      </div>
+      <h3>Aucun apprenti trouvé</h3>
+      <p *ngIf="searchTerm || filterStatut">
+        Aucun résultat pour votre recherche. Essayez de modifier vos critères.
+      </p>
+      <p *ngIf="!searchTerm && !filterStatut">
+        Aucun apprenti n'a été inscrit pour le moment.
+      </p>
+      <button
+        class="btn-primary"
+        (click)="openForm()"
+        *ngIf="!searchTerm && !filterStatut"
+      >
+        Inscrire le premier apprenti
+      </button>
+    </div>
+
+    <!-- État de chargement -->
+    <div class="loading-state" *ngIf="isLoading">
+      <div class="loading-spinner"></div>
+      <p>Chargement des apprentis...</p>
+    </div>
+  </div>
+
+  <!-- Modal Formulaire Apprenti -->
+  <div class="modal-overlay" *ngIf="showForm" (click)="closeForm()">
+    <div class="modal-container large-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>{{ isEditing ? "Modifier l'apprenti" : "Ajouter un apprenti" }}</h2>
+        <button class="btn-close" (click)="closeForm()">
+          <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+            <path
+              fill-rule="evenodd"
+              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+            />
+          </svg>
+        </button>
+      </div>
+
+      <form
+        [formGroup]="apprentiForm"
+        (ngSubmit)="onSubmit()"
+        class="modal-body"
+      >
+        <!-- Champ ID Apprenti 
+        <div class="form-group">
+          <label for="id_apprenti">ID Apprenti</label>
+          <input
+            id="id_apprenti"
+            type="text"
+            formControlName="id_apprenti"
+            [placeholder]="isEditing ? 'ID de l\'apprenti' : 'Ex: APR-001'"
+            [readonly]="isEditing"
+            [class.readonly-field]="isEditing"
+          />
+          <small class="field-hint">
+            {{
+              isEditing
+                ? "L'ID ne peut pas être modifié"
+                : "Saisir un ID unique (ex: APR-001, APR-002)"
+            }}
+          </small>
+        </div>-->
+
+        <div class="form-scroll">
+          <!-- Informations personnelles -->
+          <div class="form-section">
+            <h3 class="section-title">Informations personnelles</h3>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="nom">Nom <span class="required">*</span></label>
+                <input
+                  id="nom"
+                  type="text"
+                  formControlName="nom"
+                  placeholder="Ex: Dupont"
+                  [class.error]="isFieldInvalid('nom')"
+                />
+                <span class="error-message" *ngIf="isFieldInvalid('nom')">
+                  {{ getFieldError("nom") }}
+                </span>
+              </div>
+
+              <div class="form-group">
+                <label for="prenom"
+                  >Prénom <span class="required">*</span></label
+                >
+                <input
+                  id="prenom"
+                  type="text"
+                  formControlName="prenom"
+                  placeholder="Ex: Jean"
+                  [class.error]="isFieldInvalid('prenom')"
+                />
+                <span class="error-message" *ngIf="isFieldInvalid('prenom')">
+                  {{ getFieldError("prenom") }}
+                </span>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="date_naissance"
+                  >Date de naissance <span class="required">*</span></label
+                >
+                <input
+                  id="date_naissance"
+                  type="date"
+                  formControlName="date_naissance"
+                  [class.error]="isFieldInvalid('date_naissance')"
+                  (change)="onDateNaissanceChange()"
+                />
+                <span
+                  class="error-message"
+                  *ngIf="isFieldInvalid('date_naissance')"
+                >
+                  {{ getFieldError("date_naissance") }}
+                </span>
+                <small
+                  class="field-hint"
+                  *ngIf="apprentiForm.get('date_naissance')?.value"
+                >
+                  Âge:
+                  {{ calculateAge(apprentiForm.get("date_naissance")?.value) }}
+                  ans
+                </small>
+              </div>
+
+              <div class="form-group">
+                <label for="sexe">Sexe <span class="required">*</span></label>
+                <select
+                  id="sexe"
+                  formControlName="sexe"
+                  [class.error]="isFieldInvalid('sexe')"
+                >
+                  <option value="">Sélectionner</option>
+                  <option value="M">Masculin</option>
+                  <option value="F">Féminin</option>
+                </select>
+                <span class="error-message" *ngIf="isFieldInvalid('sexe')">
+                  {{ getFieldError("sexe") }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Contact -->
+          <div class="form-section">
+            <h3 class="section-title">Contact</h3>
+
+            <div class="form-group">
+              <label for="email">Email <span class="required">*</span></label>
+              <input
+                id="email"
+                type="email"
+                formControlName="email"
+                placeholder="exemple@email.com"
+                [class.error]="isFieldInvalid('email')"
+              />
+              <span class="error-message" *ngIf="isFieldInvalid('email')">
+                {{ getFieldError("email") }}
+              </span>
+            </div>
+
+            <div class="form-group">
+              <label for="telephone"
+                >Téléphone <span class="required">*</span></label
+              >
+              <input
+                id="telephone"
+                type="tel"
+                formControlName="telephone"
+                placeholder="+261 34 12 345 67"
+                [class.error]="isFieldInvalid('telephone')"
+                (input)="formatPhoneNumber($event)"
+                (focus)="onPhoneFocus()"
+                (blur)="onPhoneBlur()"
+              />
+              <span class="error-message" *ngIf="isFieldInvalid('telephone')">
+                {{ getFieldError("telephone") }}
+              </span>
+            </div>
+
+            <div class="form-group">
+              <label for="adresse"
+                >Adresse <span class="required">*</span></label
+              >
+              <textarea
+                id="adresse"
+                formControlName="adresse"
+                rows="3"
+                placeholder="Adresse complète"
+                [class.error]="isFieldInvalid('adresse')"
+              ></textarea>
+              <span class="error-message" *ngIf="isFieldInvalid('adresse')">
+                {{ getFieldError("adresse") }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Formation -->
+          <div class="form-section">
+            <h3 class="section-title">Formation et Situation</h3>
+
+            <div class="form-group">
+              <label for="niveau_etude"
+                >Niveau d'étude <span class="required">*</span></label
+              >
+              <select
+                id="niveau_etude"
+                formControlName="niveau_etude"
+                [class.error]="isFieldInvalid('niveau_etude')"
+              >
+                <option value="">Sélectionner</option>
+                <option *ngFor="let niveau of niveauxEtude" [value]="niveau">
+                  {{ niveau }}
+                </option>
+              </select>
+              <span
+                class="error-message"
+                *ngIf="isFieldInvalid('niveau_etude')"
+              >
+                {{ getFieldError("niveau_etude") }}
+              </span>
+            </div>
+
+            <div class="form-group">
+              <label for="situation_professionnelle"
+                >Situation professionnelle
+                <span class="required">*</span></label
+              >
+              <select
+                id="situation_professionnelle"
+                formControlName="situation_professionnelle"
+                [class.error]="isFieldInvalid('situation_professionnelle')"
+              >
+                <option value="">Sélectionner</option>
+                <option
+                  *ngFor="let situation of situationsPro"
+                  [value]="situation"
+                >
+                  {{ situation }}
+                </option>
+              </select>
+              <span
+                class="error-message"
+                *ngIf="isFieldInvalid('situation_professionnelle')"
+              >
+                {{ getFieldError("situation_professionnelle") }}
+              </span>
+            </div>
+
+            <div class="form-group" *ngIf="isEditing">
+              <label for="statut">Statut <span class="required">*</span></label>
+              <select
+                id="statut"
+                formControlName="statut"
+                [class.error]="isFieldInvalid('statut')"
+              >
+                <option value="actif">Actif</option>
+                <option value="inactif">Inactif</option>
+              </select>
+              <span class="error-message" *ngIf="isFieldInvalid('statut')">
+                {{ getFieldError("statut") }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer Buttons -->
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" (click)="closeForm()">
+            Annuler
+          </button>
+          <button
+            type="submit"
+            class="btn-primary"
+            [disabled]="isLoading || apprentiForm.invalid"
+          >
+            <span *ngIf="!isLoading">{{
+              isEditing ? "Modifier l'apprenti" : "Créer l'apprenti"
+            }}</span>
+            <span *ngIf="isLoading">
+              {{ isEditing ? "Modification..." : "Création..." }}
+            </span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Boîte de dialogue de confirmation de suppression -->
+  <div
+    class="dialog-overlay"
+    *ngIf="showDeleteConfirm"
+    (click)="cancelDelete()"
+  >
+    <div class="confirm-dialog" (click)="$event.stopPropagation()">
+      <div class="dialog-icon warning">
+        <svg width="48" height="48" viewBox="0 0 20 20" fill="currentColor">
+          <path
+            fill-rule="evenodd"
+            d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+          />
+        </svg>
+      </div>
+      <div class="dialog-content">
+        <h3>Confirmer la suppression</h3>
+        <p>
+          Êtes-vous sûr de vouloir supprimer l'apprenti
+          <strong
+            >{{ apprentiToDelete?.prenom }} {{ apprentiToDelete?.nom }}</strong
+          >
+          ?
+        </p>
+        <div class="confirm-details" *ngIf="apprentiToDelete">
+          <div class="detail-item">
+            <strong>ID :</strong>
+            <span class="id-highlight">{{ apprentiToDelete.id_apprenti }}</span>
+          </div>
+          <div class="detail-item">
+            <strong>Email :</strong>
+            <span>{{ apprentiToDelete.email }}</span>
+          </div>
+          <div class="detail-item">
+            <strong>Niveau :</strong>
+            <span>{{ apprentiToDelete.niveau_etude || "Non renseigné" }}</span>
+          </div>
+        </div>
+        <p class="text-warning">Cette action est irréversible.</p>
+      </div>
+      <div class="dialog-actions">
+        <button class="btn-secondary" (click)="cancelDelete()">Annuler</button>
+        <button
+          class="btn-danger"
+          (click)="deleteApprenti()"
+          [disabled]="isLoading"
+        >
+          <span *ngIf="!isLoading">Supprimer</span>
+          <span *ngIf="isLoading">Suppression...</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Boîte de dialogue de succès -->
+  <div
+    class="dialog-overlay"
+    *ngIf="showSuccessDialog"
+    (click)="closeSuccessDialog()"
+  >
+    <div class="success-dialog" (click)="$event.stopPropagation()">
+      <div class="dialog-icon success">
+        <svg width="48" height="48" viewBox="0 0 20 20" fill="currentColor">
+          <path
+            fill-rule="evenodd"
+            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+          />
+        </svg>
+      </div>
+      <div class="dialog-content">
+        <h3>Succès</h3>
+        <p>{{ successMessage }}</p>
+      </div>
+      <div class="dialog-actions">
+        <button class="btn-primary" (click)="closeSuccessDialog()">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Boîte de dialogue d'erreur -->
+  <div
+    class="dialog-overlay"
+    *ngIf="showErrorDialog"
+    (click)="closeErrorDialog()"
+  >
+    <div class="error-dialog" (click)="$event.stopPropagation()">
+      <div class="dialog-icon error">
+        <svg width="48" height="48" viewBox="0 0 20 20" fill="currentColor">
+          <path
+            fill-rule="evenodd"
+            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293z"
+          />
+        </svg>
+      </div>
+      <div class="dialog-content">
+        <h3>Erreur</h3>
+        <p>{{ errorMessage }}</p>
+      </div>
+      <div class="dialog-actions">
+        <button class="btn-primary" (click)="closeErrorDialog()">OK</button>
+      </div>
+    </div>
+  </div>
+</div>

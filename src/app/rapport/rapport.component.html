@@ -1,0 +1,455 @@
+<!-- rapport.component.html - CORRIGÉ -->
+
+<div class="rapport-container">
+  <!-- En-tête -->
+  <div class="header-section">
+    <h1><i class="fas fa-file-alt"></i> Gestion des Rapports</h1>
+    <div class="header-stats">
+      <div class="stat-card">
+        <div class="stat-value">{{ stats?.total_rapports || 0 }}</div>
+        <div class="stat-label">Rapports total</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">
+          {{ stats?.rapports_par_type?.['formation_complet'] || 0 }}
+        </div>
+        <div class="stat-label">Complets</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">{{ rapports.length }}</div>
+        <div class="stat-label">Enregistrés</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Barre d'actions -->
+  <div class="action-bar">
+    <button type="button" class="btn btn-primary" (click)="openForm()">
+      <i class="fas fa-plus"></i> Nouveau Rapport
+    </button>
+
+    <!-- Formulaire de recherche -->
+    <form [formGroup]="searchForm" class="search-form">
+      <div class="input-group">
+        <input
+          type="text"
+          class="form-control"
+          placeholder="Rechercher..."
+          formControlName="search"
+          (keyup.enter)="rechercher()"
+        />
+        <button
+          type="button"
+          class="btn btn-outline-secondary"
+          (click)="rechercher()"
+        >
+          <i class="fas fa-search"></i>
+        </button>
+        <button
+          type="button"
+          class="btn btn-outline-secondary"
+          (click)="reinitialiserRecherche()"
+        >
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Tableau des rapports -->
+  <div class="table-section" *ngIf="!isLoading; else loadingTemplate">
+    <div class="table-responsive">
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th>Apprenti</th>
+            <th>Formation</th>
+            <th>Date création</th>
+            <th>Type</th>
+            <th>Statut</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let rapport of paginatedRapports">
+            <td>{{ rapport.apprenti_prenom }} {{ rapport.apprenti_nom }}</td>
+            <td>
+              {{ rapport.formation_metier }}
+              <small class="text-muted d-block">{{
+                rapport.formation_type
+              }}</small>
+            </td>
+            <td>
+              {{ formatDateTime(rapport.date_creation) }}
+            </td>
+            <td>
+              <span [class]="getTypeBadgeClass(rapport.type_rapport)">
+                {{ rapport.type_rapport }}
+              </span>
+            </td>
+            <td>
+              <span [class]="getStatutBadgeClass(rapport.statut)">
+                {{ rapport.statut }}
+              </span>
+            </td>
+            <td class="text-end">
+              <div class="btn-group btn-group-sm">
+                <!-- Bouton Télécharger -->
+                <button
+                  type="button"
+                  class="btn btn-outline-success"
+                  (click)="telechargerRapport(rapport)"
+                  title="Télécharger"
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
+                      clip-rule="evenodd"
+                    />
+                  </svg>
+                </button>
+                <!-- Bouton Supprimer -->
+                <button
+                  type="button"
+                  class="btn btn-outline-danger"
+                  (click)="confirmerSuppression(rapport)"
+                  title="Supprimer"
+                  *ngIf="rapport.statut !== 'supprimé'"
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+
+          <tr *ngIf="paginatedRapports.length === 0">
+            <td colspan="7" class="text-center text-muted py-4">
+              <i class="fas fa-file-alt fa-2x mb-2"></i>
+              <p>Aucun rapport trouvé</p>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination-section" *ngIf="totalPages > 1">
+      <div class="pagination-info">
+        Affichage {{ (currentPage - 1) * pageSize + 1 }} à
+        {{ Math.min(currentPage * pageSize, totalItems) }} sur {{ totalItems }}
+      </div>
+
+      <nav>
+        <ul class="pagination">
+          <li class="page-item" [class.disabled]="currentPage === 1">
+            <a class="page-link" (click)="previousPage()">
+              <i class="fas fa-chevron-left"></i>
+            </a>
+          </li>
+
+          <li
+            class="page-item"
+            *ngFor="let page of getPageNumbers()"
+            [class.active]="page === currentPage"
+          >
+            <a class="page-link" (click)="goToPage(page)">{{ page }}</a>
+          </li>
+
+          <li class="page-item" [class.disabled]="currentPage === totalPages">
+            <a class="page-link" (click)="nextPage()">
+              <i class="fas fa-chevron-right"></i>
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL DU FORMULAIRE ==================== -->
+  <!-- CE MODAL DOIT ÊTRE SÉPARÉ ET VISIBLE SEULEMENT QUAND showForm = true -->
+  <div class="modal-overlay" *ngIf="showForm">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Générer un Nouveau Rapport</h3>
+        <button type="button" class="btn-close" (click)="closeForm()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <form [formGroup]="rapportForm">
+          <!-- APPRENTI -->
+          <div class="form-group mb-4">
+            <label class="form-label fw-bold">
+              <i class="fas fa-user me-2"></i>Apprenti *
+            </label>
+            <select
+              class="form-control"
+              formControlName="id_apprenti"
+              [class.is-invalid]="
+                rapportForm.get('id_apprenti')?.invalid &&
+                rapportForm.get('id_apprenti')?.touched
+              "
+            >
+              <option value="">-- Sélectionnez un apprenti --</option>
+              <option
+                *ngFor="let apprenti of apprentis"
+                [value]="apprenti.id_apprenti"
+              >
+                {{ apprenti.prenom }} {{ apprenti.nom }}
+                <span *ngIf="apprenti.email" class="text-muted"
+                  >({{ apprenti.email }})</span
+                >
+                <small class="text-muted d-block"
+                  >ID: {{ apprenti.id_apprenti }}</small
+                >
+              </option>
+            </select>
+
+            <div
+              *ngIf="
+                rapportForm.get('id_apprenti')?.invalid &&
+                rapportForm.get('id_apprenti')?.touched
+              "
+              class="invalid-feedback"
+            >
+              {{ getApprentiErrorMessage() }}
+            </div>
+
+            <div *ngIf="selectedApprentiName" class="mt-2">
+              <div class="alert alert-info py-2 mb-0">
+                <i class="fas fa-check-circle me-2"></i>
+                <strong>Sélectionné :</strong> {{ selectedApprentiName }}
+              </div>
+            </div>
+          </div>
+
+          <!-- FORMATION -->
+          <div class="form-group mb-4">
+            <label class="form-label fw-bold">
+              <i class="fas fa-graduation-cap me-2"></i>Formation *
+            </label>
+
+            <!-- Indicateur de chargement -->
+            <div *ngIf="isLoadingFormations" class="alert alert-warning mb-3">
+              <i class="fas fa-spinner fa-spin me-2"></i>
+              Recherche des formations de l'apprenti...
+            </div>
+
+            <!-- CAS 1: Une seule formation trouvée -->
+            <div
+              *ngIf="!isLoadingFormations && apprentiFormations.length === 1"
+              class="mb-3"
+            >
+              <div class="alert alert-success">
+                <div class="d-flex align-items-center">
+                  <i class="fas fa-check-circle fa-lg text-success me-3"></i>
+                  <div>
+                    <h6 class="mb-1">Formation détectée automatiquement</h6>
+                    <p class="mb-0 fw-bold">
+                      {{ apprentiFormations[0].metier }}
+                    </p>
+                    <small class="text-muted">
+                      {{ apprentiFormations[0].type_formation }} • Du
+                      {{ formatDate(apprentiFormations[0].date_debut) }} au
+                      {{ formatDate(apprentiFormations[0].date_fin) }}
+                    </small>
+                  </div>
+                </div>
+              </div>
+              <!-- Champ caché pour stocker l'ID formation -->
+              <input type="hidden" formControlName="id_formation" />
+            </div>
+
+            <!-- CAS 2: Plusieurs formations disponibles -->
+            <div
+              *ngIf="!isLoadingFormations && apprentiFormations.length > 1"
+              class="mb-3"
+            >
+              <div class="alert alert-warning">
+                <div class="d-flex align-items-center mb-2">
+                  <i class="fas fa-info-circle fa-lg text-warning me-3"></i>
+                  <div>
+                    <h6 class="mb-0">Plusieurs formations disponibles</h6>
+                    <small class="text-muted">{{ formationAuto }}</small>
+                  </div>
+                </div>
+
+                <select
+                  class="form-control"
+                  formControlName="id_formation"
+                  [class.is-invalid]="
+                    rapportForm.get('id_formation')?.invalid &&
+                    rapportForm.get('id_formation')?.touched
+                  "
+                >
+                  <option value="">-- Sélectionnez une formation --</option>
+                  <option
+                    *ngFor="let formation of apprentiFormations"
+                    [value]="formation.id_formation"
+                  >
+                    {{ formation.metier }} ({{ formation.type_formation }})
+                    <span *ngIf="formation.date_debut">
+                      - du {{ formatDate(formation.date_debut) }}
+                    </span>
+                  </option>
+                </select>
+              </div>
+            </div>
+
+            <!-- CAS 3: Aucune formation trouvée -->
+            <div
+              *ngIf="
+                !isLoadingFormations &&
+                apprentiFormations.length === 0 &&
+                rapportForm.get('id_apprenti')?.value
+              "
+              class="mb-3"
+            >
+              <div class="alert alert-danger">
+                <div class="d-flex align-items-center">
+                  <i
+                    class="fas fa-exclamation-triangle fa-lg text-danger me-3"
+                  ></i>
+                  <div>
+                    <h6 class="mb-1">Aucune formation trouvée</h6>
+                    <p class="mb-0">{{ formationAuto }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- CAS 4: Aucun apprenti sélectionné -->
+            <div
+              *ngIf="!rapportForm.get('id_apprenti')?.value"
+              class="alert alert-secondary"
+            >
+              <i class="fas fa-info-circle me-2"></i>
+              Sélectionnez d'abord un apprenti pour voir ses formations
+            </div>
+
+            <!-- Message d'erreur formation -->
+            <div
+              *ngIf="
+                rapportForm.get('id_formation')?.invalid &&
+                rapportForm.get('id_formation')?.touched
+              "
+              class="invalid-feedback d-block mt-2"
+            >
+              {{ getFormationErrorMessage() }}
+            </div>
+          </div>
+
+          <!-- TYPE DE RAPPORT -->
+
+          <!-- BOUTONS -->
+          <div class="modal-footer border-top-0 pt-4">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              (click)="closeForm()"
+              [disabled]="isGenerating"
+            >
+              <i class="fas fa-times me-2"></i>Annuler
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              (click)="genererRapport()"
+              [disabled]="rapportForm.invalid || isGenerating"
+            >
+              <i class="fas fa-file-pdf me-2"></i>
+              {{
+                isGenerating ? "Génération en cours..." : "Générer le Rapport"
+              }}
+              <span
+                *ngIf="isGenerating"
+                class="spinner-border spinner-border-sm ms-2"
+              ></span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <!-- ==================== FIN MODAL ==================== -->
+
+  <!-- Dialogue de confirmation suppression -->
+  <div class="modal-overlay" *ngIf="showConfirmDelete">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h3>{{ dialogTitle }}</h3>
+        <button type="button" class="btn-close" (click)="closeConfirmDelete()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div [innerHTML]="dialogMessage"></div>
+      </div>
+
+      <div class="modal-footer">
+        <button
+          type="button"
+          class="btn btn-secondary"
+          (click)="closeConfirmDelete()"
+        >
+          Annuler
+        </button>
+        <button
+          type="button"
+          class="btn btn-danger"
+          (click)="confirmerSuppressionAction()"
+        >
+          Supprimer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dialogues d'information -->
+  <div class="toast-container" *ngIf="dialogMessage">
+    <div
+      class="toast"
+      [ngClass]="{
+        'toast-success': dialogType === 'success',
+        'toast-error': dialogType === 'error'
+      }"
+    >
+      <div class="toast-header">
+        <strong>{{ dialogTitle }}</strong>
+        <button type="button" class="btn-close" (click)="closeDialog()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="toast-body">
+        {{ dialogMessage }}
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Template de chargement -->
+<ng-template #loadingTemplate>
+  <div class="loading-section">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Chargement...</span>
+    </div>
+    <p class="mt-3">Chargement des rapports...</p>
+  </div>
+</ng-template>

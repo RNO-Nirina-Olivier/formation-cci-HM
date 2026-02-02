@@ -1,0 +1,103 @@
+<div class="dashboard-container">
+  <!-- Loading -->
+  <div class="loading-overlay" *ngIf="loading && !dashboardData">
+    <div class="spinner"></div>
+    <p>Chargement des données...</p>
+  </div>
+
+  <!-- Contenu principal -->
+  <div *ngIf="dashboardData && !loading">
+    <!-- Statistiques KPI -->
+    <div class="stats-section">
+      <h3><i class="fas fa-chart-bar"></i> Aperçu Général</h3>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon bg-primary">
+            <i class="fas fa-users"></i>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">
+              {{ dashboardData.statistics.total_apprentis }}
+            </div>
+            <div class="stat-label">Apprentis Actifs</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon bg-success">
+            <i class="fas fa-graduation-cap"></i>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">
+              {{ dashboardData.statistics.total_formations }}
+            </div>
+            <div class="stat-label">Formations</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon bg-warning">
+            <i class="fas fa-calendar-alt"></i>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">
+              {{ dashboardData.statistics.formations_cours }}
+            </div>
+            <div class="stat-label">Formations en Cours</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon bg-info">
+            <i class="fas fa-clock"></i>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">
+              {{ dashboardData.statistics.inscriptions_attente }}
+            </div>
+            <div class="stat-label">Inscriptions en Attente</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon bg-secondary">
+            <i class="fas fa-user-check"></i>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">
+              {{ dashboardData.statistics.reinscriptions_validees }}
+            </div>
+            <div class="stat-label">Réinscriptions (30j)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Graphiques -->
+    <div class="charts-section">
+      <div class="chart-row">
+        <div class="chart-card">
+          <h4><i class="fas fa-chart-line"></i> Évolution des Inscriptions</h4>
+          <div class="chart-container">
+            <canvas id="inscriptionChart"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <h4><i class="fas fa-chart-pie"></i> Répartition des Formations</h4>
+          <div class="chart-container">
+            <canvas id="formationChart"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="chart-row">
+        <div class="chart-card">
+          <h4><i class="fas fa-star"></i> Moyennes par Formation</h4>
+          <div class="chart-container">
+            <canvas id="scoresChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
